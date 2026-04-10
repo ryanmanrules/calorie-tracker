@@ -1,6 +1,6 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import CalorieTracker from "./calorie-tracker.jsx";
+import CalorieTracker from "./CalorieTracker.jsx";
 
 createRoot(document.getElementById("root")).render(
     <StrictMode>
