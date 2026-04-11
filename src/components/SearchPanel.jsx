@@ -47,11 +47,11 @@ function ResultRow({ food, onAddFn, scState, setScState, qState, setQState, cgSt
       </select>
       <div style={{ display: "flex", gap: 6 }}>
         {isCustom ? (
-          <input type="number" placeholder="Enter grams" value={cgState[food.fdcId] || ""}
+          <input key="amount" type="text" inputMode="decimal" placeholder="Enter grams" value={cgState[food.fdcId] || ""}
             onChange={(e) => setCgState((prev) => ({ ...prev, [food.fdcId]: e.target.value }))}
             style={smallInput} />
         ) : (
-          <input type="number" placeholder="Qty (default 1)" value={qState[food.fdcId] || ""}
+          <input key="amount" type="text" inputMode="decimal" placeholder="Qty (default 1)" value={qState[food.fdcId] || ""}
             onChange={(e) => setQState((prev) => ({ ...prev, [food.fdcId]: e.target.value }))}
             style={smallInput} />
         )}
