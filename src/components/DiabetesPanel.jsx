@@ -1,200 +1,249 @@
 import { useState } from "react";
-import { lsGet, lsSet, todayKey } from "../utils/storage";
-import { MC } from "../utils/constants";
+import { lsGet, lsSet } from "../utils/storage";
 
-// Glucose reading types shown in the log entry form
-const READING_TYPES = ["Fasting", "Post-meal (1hr)", "Post-meal (2hr)", "Bedtime"];
-
-// Normal ranges in mg/dL for color coding
-const RANGES = {
-  Fasting:          { low: 70, high: 100 },
-  "Post-meal (1hr)": { low: 70, high: 180 },
-  "Post-meal (2hr)": { low: 70, high: 140 },
-  Bedtime:          { low: 100, high: 140 },
+// colour tokens local to this panel
+const C = {
+    good: "#22c55e",
+    warn: "#f97316",
+    danger: "#ef4444",
+    blue: "#60a5fa",
+    muted: "#777",
+    border: "#2e2e3a",
+    card: "#242430",
+    deep: "#18181f",
 };
 
-// eAG to A1C conversion — standard formula used by ADA
-// A1C = (eAG + 46.7) / 28.7
-const estimateA1C = (avgGlucose) => ((avgGlucose + 46.7) / 28.7).toFixed(1);
+const loadGlucose = () => lsGet("ct_glucose", []);
+const saveGlucose = (log) => lsSet("ct_glucose", log);
+const loadInsulin = () => lsGet("ct_insulin", []);
+const saveInsulin = (log) => lsSet("ct_insulin", log);
 
-const readingColor = (type, value) => {
-  const range = RANGES[type];
-  if (!range) return "#fff";
-  if (value < range.low)  return "#60a5fa"; // low — blue
-  if (value > range.high) return "#ef4444"; // high — red
-  return "#22c55e";                          // in range — green
-};
+let gId = 1;
+let iId = 1;
 
-const loadGlucoseLog = () => lsGet("ct_glucose", []);
-const saveGlucoseLog = (log) => lsSet("ct_glucose", log);
-
-let nextGlucoseId = 1;
-
-export default function DiabetesPanel({ items, dateKey }) {
-  const [glucoseLog, setGlucoseLog] = useState(() => loadGlucoseLog());
-  const [readingType, setReadingType] = useState("Fasting");
-  const [readingValue, setReadingValue] = useState("");
-  const [readingNote, setReadingNote] = useState("");
-
-  // Net carbs and sugar derived from today's food log
-  const netCarbs = items.reduce((acc, i) => acc + ((i.carbs || 0) - (i.fiber || 0)), 0);
-  const totalSugar = items.reduce((acc, i) => acc + (i.sugar || 0), 0);
-
-  // Only show readings for the currently viewed day
-  const todayReadings = glucoseLog.filter((r) => r.date === dateKey);
-
-  // A1C estimate uses all readings across all days (needs 90 days ideally)
-  const allValues   = glucoseLog.map((r) => r.value);
-  const avgGlucose  = allValues.length ? Math.round(allValues.reduce((a, b) => a + b, 0) / allValues.length) : null;
-  const a1c         = avgGlucose ? estimateA1C(avgGlucose) : null;
-
-  // Carb distribution — how carbs are spread across meal groups for the day
-  const carbsByMeal = ["Morning", "Afternoon", "Evening", "Snack"].map((group) => {
-    const groupItems = items.filter((i) => i.time === group);
-    const carbs = groupItems.reduce((acc, i) => acc + (i.carbs || 0), 0);
-    return { group, carbs };
-  }).filter((g) => g.carbs > 0);
-
-  const totalCarbs = items.reduce((acc, i) => acc + (i.carbs || 0), 0);
-
-  const addReading = () => {
-    if (!readingValue) return;
-    const entry = {
-      id:    nextGlucoseId++,
-      date:  dateKey,
-      type:  readingType,
-      value: parseInt(readingValue),
-      note:  readingNote.trim(),
-      time:  new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
+// colour-code a glucose reading against standard T1D targets
+const glucoseColor = (type, value) => {
+    const ranges = {
+        Fasting: { low: 80, high: 130 },
+        "Post-meal (1hr)": { low: 80, high: 180 },
+        "Post-meal (2hr)": { low: 80, high: 140 },
+        Bedtime: { low: 100, high: 140 },
     };
-    const updated = [entry, ...glucoseLog];
-    setGlucoseLog(updated);
-    saveGlucoseLog(updated);
-    setReadingValue("");
-    setReadingNote("");
-  };
+    const r = ranges[type];
+    if (!r) return "#fff";
+    if (value < r.low) return C.blue;
+    if (value > r.high) return C.danger;
+    return C.good;
+};
 
-  const removeReading = (id) => {
-    const updated = glucoseLog.filter((r) => r.id !== id);
-    setGlucoseLog(updated);
-    saveGlucoseLog(updated);
-  };
-
-  const card = {
-    background: "#242430", border: "1px solid #2e2e3a",
-    borderRadius: 12, padding: "14px 16px", marginBottom: 12,
-  };
-
-  const inputStyle = {
-    width: "100%", background: "#18181f", border: "1px solid #2e2e3a",
-    borderRadius: 8, padding: "8px 12px", color: "#e8e8e8",
-    fontSize: 13, fontFamily: "inherit", outline: "none",
-  };
-
-  return (
-    <div style={{ marginBottom: 20 }}>
-      <div style={{ fontSize: 10, letterSpacing: 3, color: "#fff", marginBottom: 14 }}>DIABETES MODE</div>
-
-      {/* Net carbs + sugar summary */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 12 }}>
-        <div style={card}>
-          <div style={{ fontSize: 20, fontWeight: 500, color: MC.carbs }}>{Math.max(0, Math.round(netCarbs))}g</div>
-          <div style={{ fontSize: 9, color: "#fff", letterSpacing: 2, marginTop: 2 }}>NET CARBS</div>
-          <div style={{ fontSize: 10, color: "#777", marginTop: 4 }}>carbs minus fiber</div>
-        </div>
-        <div style={card}>
-          <div style={{ fontSize: 20, fontWeight: 500, color: "#f472b6" }}>{totalSugar}g</div>
-          <div style={{ fontSize: 9, color: "#fff", letterSpacing: 2, marginTop: 2 }}>SUGAR</div>
-          <div style={{ fontSize: 10, color: "#777", marginTop: 4 }}>from food log</div>
-        </div>
-      </div>
-
-      {/* Carb distribution */}
-      {carbsByMeal.length > 0 && (
-        <div style={{ ...card, marginBottom: 12 }}>
-          <div style={{ fontSize: 10, letterSpacing: 2, color: "#fff", marginBottom: 12 }}>CARB DISTRIBUTION</div>
-          {carbsByMeal.map(({ group, carbs }) => {
-            const pct = totalCarbs > 0 ? (carbs / totalCarbs) * 100 : 0;
-            return (
-              <div key={group} style={{ marginBottom: 10 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                  <span style={{ fontSize: 11, color: "#ccc" }}>{group}</span>
-                  <span style={{ fontSize: 11, color: MC.carbs }}>{carbs}g <span style={{ color: "#666" }}>({Math.round(pct)}%)</span></span>
+// expandable section — subtitle always visible, tap INFO for detail
+function Section({ title, subtitle, detail, children }) {
+    const [open, setOpen] = useState(false);
+    return (
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, marginBottom: 12, overflow: "hidden" }}>
+            <div style={{ padding: "12px 14px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                    <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 10, letterSpacing: 2, color: "#fff" }}>{title}</div>
+                        <div style={{ fontSize: 10, color: C.muted, marginTop: 3, lineHeight: 1.5 }}>{subtitle}</div>
+                    </div>
+                    <button
+                        onClick={() => setOpen((v) => !v)}
+                        style={{ background: "none", border: `1px solid ${C.border}`, borderRadius: 6, padding: "2px 8px", color: C.muted, fontSize: 9, cursor: "pointer", letterSpacing: 1, marginLeft: 10, flexShrink: 0 }}
+                    >
+                        {open ? "LESS" : "INFO"}
+                    </button>
                 </div>
-                <div style={{ background: "#2e2e3a", borderRadius: 4, height: 4, overflow: "hidden" }}>
-                  <div style={{ height: "100%", width: `${pct}%`, background: MC.carbs, borderRadius: 4, transition: "width 0.4s ease" }} />
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Blood glucose log */}
-      <div style={card}>
-        <div style={{ fontSize: 10, letterSpacing: 2, color: "#fff", marginBottom: 12 }}>BLOOD GLUCOSE LOG</div>
-
-        {/* Entry form */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
-          <select value={readingType} onChange={(e) => setReadingType(e.target.value)}
-            style={{ ...inputStyle, cursor: "pointer" }}>
-            {READING_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-          </select>
-          <div style={{ display: "flex", gap: 6 }}>
-            <input
-              type="number"
-              placeholder="mg/dL"
-              value={readingValue}
-              onChange={(e) => setReadingValue(e.target.value)}
-              style={inputStyle}
-            />
-            <button onClick={addReading} style={{ background: "#f97316", border: "none", borderRadius: 8, padding: "6px 14px", color: "#fff", fontSize: 12, cursor: "pointer", flexShrink: 0 }}>
-              Log
-            </button>
-          </div>
-        </div>
-        <input
-          placeholder="Note (optional — e.g. just woke up, after walk)"
-          value={readingNote}
-          onChange={(e) => setReadingNote(e.target.value)}
-          style={{ ...inputStyle, marginBottom: 12 }}
-        />
-
-        {/* Today's readings */}
-        {todayReadings.length === 0 ? (
-          <div style={{ fontSize: 11, color: "#555", textAlign: "center", padding: "8px 0" }}>No readings logged today.</div>
-        ) : (
-          todayReadings.map((r) => (
-            <div key={r.id} className="row" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 10px", borderRadius: 8, background: "#18181f", marginBottom: 4, transition: "background 0.15s" }}>
-              <div>
-                <div style={{ fontSize: 12, color: "#ccc" }}>{r.type} <span style={{ color: "#555", fontSize: 10 }}>{r.time}</span></div>
-                {r.note && <div style={{ fontSize: 10, color: "#666", marginTop: 2 }}>{r.note}</div>}
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontSize: 16, fontWeight: 500, color: readingColor(r.type, r.value) }}>{r.value}</span>
-                <span style={{ fontSize: 10, color: "#555" }}>mg/dL</span>
-                <button className="del-btn" onClick={() => removeReading(r.id)} style={{ background: "none", border: "none", color: "#777", cursor: "pointer", fontSize: 14, padding: "0 2px" }}>✕</button>
-              </div>
+                {open && (
+                    <div style={{ marginTop: 10, padding: "10px 12px", background: C.deep, borderRadius: 8, fontSize: 11, color: "#aaa", lineHeight: 1.7 }}>
+                        {detail}
+                    </div>
+                )}
             </div>
-          ))
-        )}
-      </div>
-
-      {/* A1C estimator */}
-      {a1c && (
-        <div style={card}>
-          <div style={{ fontSize: 10, letterSpacing: 2, color: "#fff", marginBottom: 8 }}>ESTIMATED A1C</div>
-          <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 6 }}>
-            <span style={{ fontFamily: "'Syne', sans-serif", fontSize: 36, fontWeight: 800, color: parseFloat(a1c) < 5.7 ? "#22c55e" : parseFloat(a1c) < 6.5 ? "#f97316" : "#ef4444" }}>
-              {a1c}%
-            </span>
-            <span style={{ fontSize: 11, color: "#666" }}>based on {allValues.length} reading{allValues.length !== 1 ? "s" : ""}</span>
-          </div>
-          <div style={{ fontSize: 10, color: "#555", lineHeight: 1.6 }}>
-            This is a rough estimate based on average glucose. Clinical A1C requires a lab test over 90 days. Not a substitute for medical advice.
-          </div>
+            <div style={{ padding: "0 14px 14px" }}>{children}</div>
         </div>
-      )}
-    </div>
-  );
+    );
+}
+
+export default function DiabetesPanel({ netCarbs }) {
+    const [glucoseLog, setGlucoseLog] = useState(loadGlucose);
+    const [insulinLog, setInsulinLog] = useState(loadInsulin);
+    const [gType, setGType] = useState("Fasting");
+    const [gValue, setGValue] = useState("");
+    const [gNote, setGNote] = useState("");
+    const [iType, setIType] = useState("Bolus");
+    const [iDose, setIDose] = useState("");
+    const [iNote, setINote] = useState("");
+
+    const today = new Date().toISOString().slice(0, 10);
+    const todayGlucose = glucoseLog.filter((r) => r.date === today);
+    const todayInsulin = insulinLog.filter((r) => r.date === today);
+    const totalBolus = todayInsulin.filter((r) => r.type === "Bolus").reduce((a, r) => a + r.dose, 0);
+    const totalBasal = todayInsulin.filter((r) => r.type === "Basal").reduce((a, r) => a + r.dose, 0);
+
+    const logGlucose = () => {
+        if (!gValue) return;
+        const entry = { id: gId++, date: today, type: gType, value: parseInt(gValue), note: gNote.trim(), time: new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }) };
+        const updated = [entry, ...glucoseLog];
+        setGlucoseLog(updated); saveGlucose(updated);
+        setGValue(""); setGNote("");
+    };
+
+    const logInsulin = () => {
+        if (!iDose) return;
+        const entry = { id: iId++, date: today, type: iType, dose: parseFloat(iDose), note: iNote.trim(), time: new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }) };
+        const updated = [entry, ...insulinLog];
+        setInsulinLog(updated); saveInsulin(updated);
+        setIDose(""); setINote("");
+    };
+
+    const removeGlucose = (id) => { const u = glucoseLog.filter((r) => r.id !== id); setGlucoseLog(u); saveGlucose(u); };
+    const removeInsulin = (id) => { const u = insulinLog.filter((r) => r.id !== id); setInsulinLog(u); saveInsulin(u); };
+
+    const input = { width: "100%", background: C.deep, border: `1px solid ${C.border}`, borderRadius: 8, padding: "8px 10px", color: "#e8e8e8", fontSize: 12, fontFamily: "inherit", outline: "none" };
+    const logBtn = { background: "#f97316", border: "none", borderRadius: 8, padding: "7px 14px", color: "#fff", fontSize: 12, cursor: "pointer", flexShrink: 0 };
+    const row = { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "7px 10px", borderRadius: 8, background: C.deep, marginBottom: 4 };
+
+    return (
+        <div style={{ marginBottom: 20 }}>
+            <div style={{ fontSize: 10, letterSpacing: 3, color: "#fff", marginBottom: 12 }}>DIABETES MODE</div>
+
+            {/* Net carbs */}
+            <Section
+                title="NET CARBS TODAY"
+                subtitle="Total carbs minus fiber — the carbs that actually raise blood sugar."
+                detail={
+                    <>
+                        <strong style={{ color: "#fff" }}>Why it matters for weight:</strong> In T1D, carbs drive insulin demand. Higher insulin doses promote fat storage and make weight loss harder. Keeping net carbs consistent helps stabilize doses and gives your body a better chance to lose weight steadily.
+                        <br /><br />
+                        <strong style={{ color: C.good }}>Helps:</strong> Lower, consistent net carbs → more predictable blood sugar → lower insulin doses → easier weight management.
+                        <br />
+                        <strong style={{ color: C.danger }}>Hurts:</strong> High or erratic carb intake → blood sugar spikes → higher correction doses → more insulin → harder to lose weight.
+                    </>
+                }
+            >
+                <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginTop: 4 }}>
+                    <span style={{ fontSize: 28, fontWeight: 600, color: netCarbs > 150 ? C.warn : C.good }}>{netCarbs}g</span>
+                    <span style={{ fontSize: 11, color: C.muted }}>net carbs</span>
+                </div>
+            </Section>
+
+            {/* Blood glucose */}
+            <Section
+                title="BLOOD GLUCOSE"
+                subtitle="Log readings to spot patterns. Green = in range · Red = high · Blue = low."
+                detail={
+                    <>
+                        <strong style={{ color: "#fff" }}>Target ranges (ADA guidelines):</strong>
+                        <br />Fasting: 80–130 mg/dL &nbsp;·&nbsp; Post-meal (1hr): under 180 &nbsp;·&nbsp; Post-meal (2hr): under 140 &nbsp;·&nbsp; Bedtime: 100–140
+                        <br /><br />
+                        <strong style={{ color: C.danger }}>Consistently high:</strong> Causes fatigue, hunger, and requires more insulin — all of which work against weight loss.
+                        <br /><br />
+                        <strong style={{ color: C.blue }}>Consistently low:</strong> Forces extra carb intake to recover, disrupts calorie control, and can cause rebound highs.
+                        <br /><br />
+                        <strong style={{ color: C.good }}>In range:</strong> Stable glucose means less corrective insulin and more predictable energy — the best environment for weight management.
+                    </>
+                }
+            >
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 6 }}>
+                    <select value={gType} onChange={(e) => setGType(e.target.value)} style={{ ...input, cursor: "pointer" }}>
+                        {["Fasting", "Post-meal (1hr)", "Post-meal (2hr)", "Bedtime"].map((t) => <option key={t}>{t}</option>)}
+                    </select>
+                    <div style={{ display: "flex", gap: 6 }}>
+                        <input type="number" placeholder="mg/dL" value={gValue} onChange={(e) => setGValue(e.target.value)} style={input} />
+                        <button onClick={logGlucose} style={logBtn}>Log</button>
+                    </div>
+                </div>
+                <input placeholder="Note (optional)" value={gNote} onChange={(e) => setGNote(e.target.value)} style={{ ...input, marginBottom: 8 }} />
+                {todayGlucose.length === 0 ? (
+                    <div style={{ fontSize: 11, color: "#444", textAlign: "center", padding: "6px 0" }}>No readings today.</div>
+                ) : todayGlucose.map((r) => (
+                    <div key={r.id} className="row" style={row}>
+                        <div>
+                            <span style={{ fontSize: 11, color: "#ccc" }}>{r.type}</span>
+                            <span style={{ fontSize: 10, color: "#555", marginLeft: 6 }}>{r.time}</span>
+                            {r.note && <div style={{ fontSize: 10, color: "#666", marginTop: 2 }}>{r.note}</div>}
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <span style={{ fontSize: 15, fontWeight: 500, color: glucoseColor(r.type, r.value) }}>{r.value}</span>
+                            <span style={{ fontSize: 10, color: "#555" }}>mg/dL</span>
+                            <button className="del-btn" onClick={() => removeGlucose(r.id)} style={{ background: "none", border: "none", color: C.muted, cursor: "pointer", fontSize: 13 }}>✕</button>
+                        </div>
+                    </div>
+                ))}
+            </Section>
+
+            {/* Insulin log */}
+            <Section
+                title="INSULIN LOG"
+                subtitle={`Today — Bolus: ${totalBolus}u · Basal: ${totalBasal}u`}
+                detail={
+                    <>
+                        <strong style={{ color: "#fff" }}>Bolus (mealtime):</strong> Taken to cover carbs and correct highs. Dose size is directly tied to carb intake — another reason consistent net carbs helps.
+                        <br /><br />
+                        <strong style={{ color: "#fff" }}>Basal (background):</strong> Keeps blood sugar stable between meals and overnight. Usually set by your care team.
+                        <br /><br />
+                        <strong style={{ color: C.danger }}>Weight impact:</strong> Insulin is anabolic — it promotes fat storage. This doesn't mean take less than prescribed, but reducing carb intake (and therefore bolus needs) is one of the most effective levers for T1D weight management.
+                        <br /><br />
+                        <strong style={{ color: C.good }}>Goal:</strong> Smaller, consistent bolus doses through stable carb intake — never skip insulin, which is extremely dangerous.
+                    </>
+                }
+            >
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 6 }}>
+                    <select value={iType} onChange={(e) => setIType(e.target.value)} style={{ ...input, cursor: "pointer" }}>
+                        <option>Bolus</option>
+                        <option>Basal</option>
+                    </select>
+                    <div style={{ display: "flex", gap: 6 }}>
+                        <input type="number" placeholder="Units" value={iDose} onChange={(e) => setIDose(e.target.value)} step="0.5" style={input} />
+                        <button onClick={logInsulin} style={logBtn}>Log</button>
+                    </div>
+                </div>
+                <input placeholder="Note (optional — e.g. before dinner, correction)" value={iNote} onChange={(e) => setINote(e.target.value)} style={{ ...input, marginBottom: 8 }} />
+                {todayInsulin.length === 0 ? (
+                    <div style={{ fontSize: 11, color: "#444", textAlign: "center", padding: "6px 0" }}>No doses logged today.</div>
+                ) : todayInsulin.map((r) => (
+                    <div key={r.id} className="row" style={row}>
+                        <div>
+                            <span style={{ fontSize: 11, color: "#ccc" }}>{r.type}</span>
+                            <span style={{ fontSize: 10, color: "#555", marginLeft: 6 }}>{r.time}</span>
+                            {r.note && <div style={{ fontSize: 10, color: "#666", marginTop: 2 }}>{r.note}</div>}
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <span style={{ fontSize: 15, fontWeight: 500, color: r.type === "Bolus" ? "#f97316" : C.blue }}>{r.dose}u</span>
+                            <button className="del-btn" onClick={() => removeInsulin(r.id)} style={{ background: "none", border: "none", color: C.muted, cursor: "pointer", fontSize: 13 }}>✕</button>
+                        </div>
+                    </div>
+                ))}
+            </Section>
+
+            {/* General T1D guidance */}
+            <Section
+                title="T1D & WEIGHT MANAGEMENT"
+                subtitle="Key principles for losing weight with Type 1 diabetes. Tap INFO to read."
+                detail={
+                    <>
+                        <strong style={{ color: C.good }}>What helps:</strong>
+                        <br />• Consistent carb intake day to day — reduces insulin variability
+                        <br />• Higher protein — promotes satiety without raising blood sugar much
+                        <br />• More fiber — slows glucose absorption, reduces post-meal spikes
+                        <br />• Eating at regular times — makes dosing more predictable
+                        <br />• Moderate activity — improves insulin sensitivity over time
+                        <br /><br />
+                        <strong style={{ color: C.danger }}>What hurts:</strong>
+                        <br />• Skipping insulin to lose weight — extremely dangerous, causes serious complications
+                        <br />• High-carb meals with large bolus doses — spikes and crashes promote fat storage
+                        <br />• Frequent lows — forces extra carb intake and disrupts calorie targets
+                        <br />• Inconsistent meal timing — makes blood sugar and doses harder to predict
+                        <br /><br />
+                        <strong style={{ color: "#fff" }}>Important:</strong> Always work with your care team before making significant diet changes. This app is a tracking tool, not medical advice.
+                    </>
+                }
+            >
+                <div style={{ fontSize: 11, color: C.muted, lineHeight: 1.6 }}>
+                    Tap INFO above for key T1D weight management principles.
+                </div>
+            </Section>
+        </div>
+    );
 }

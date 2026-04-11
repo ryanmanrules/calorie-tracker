@@ -13,6 +13,7 @@ export function extractNutrients(foodNutrients) {
     fat:      find("total lipid") || find("fat"),
     carbs:    find("carbohydrate"),
     fiber:    find("fiber"),
+    sugar:    find("sugars, total including") || find("sugars, total") || find("total sugars") || find("sugar"),
   };
 }
 
