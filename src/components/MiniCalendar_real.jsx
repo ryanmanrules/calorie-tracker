@@ -1,6 +1,3 @@
-// TESTING VERSION — future dates unlocked for testing diabetes weight analysis
-// Swap back to MiniCalendar.jsx (production) before deploying
-
 import { useState } from "react";
 import { todayKey, loadDay } from "../utils/storage";
 import { MC } from "../utils/constants";
@@ -22,16 +19,19 @@ export default function MiniCalendar({ current, onChange, onClose }) {
     else setViewMonth((v) => v - 1);
   };
 
-  // no future month restriction
   const nextMonth = () => {
+    const nm  = viewMonth === 11 ? 0 : viewMonth + 1;
+    const ny  = viewMonth === 11 ? viewYear + 1 : viewYear;
+    const now = new Date();
+    if (ny > now.getFullYear() || (ny === now.getFullYear() && nm > now.getMonth())) return;
     if (viewMonth === 11) { setViewYear((v) => v + 1); setViewMonth(0); }
     else setViewMonth((v) => v + 1);
   };
 
-  // no future date restriction
   const selectDay = (day) => {
     if (!day) return;
     const key = `${viewYear}-${String(viewMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    if (key > today) return;
     onChange(key);
     onClose();
   };
@@ -56,20 +56,21 @@ export default function MiniCalendar({ current, onChange, onClose }) {
         ))}
       </div>
 
-      {/* day cells — all selectable */}
+      {/* day cells */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2 }}>
         {cells.map((day, i) => {
           if (!day) return <div key={i} />;
-          const key     = `${viewYear}-${String(viewMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-          const isCur   = key === current;
-          const isToday = key === today;
-          const hasData = loadDay(key).length > 0;
+          const key      = `${viewYear}-${String(viewMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+          const isCur    = key === current;
+          const isToday  = key === today;
+          const isFuture = key > today;
+          const hasData  = loadDay(key).length > 0;
           return (
-            <div key={i} onClick={() => selectDay(day)} style={{
+            <div key={i} onClick={() => !isFuture && selectDay(day)} style={{
               textAlign: "center", fontSize: 11, padding: "5px 2px", borderRadius: 6,
-              cursor: "pointer",
+              cursor: isFuture ? "default" : "pointer",
               background: isCur ? "#f97316" : isToday ? "#2e2e3a" : "none",
-              color: isCur ? "#fff" : isToday ? "#fff" : "#bbb",
+              color: isFuture ? "#444" : isCur ? "#fff" : isToday ? "#fff" : "#bbb",
               fontWeight: isCur || isToday ? 600 : 400,
             }}>
               {day}
