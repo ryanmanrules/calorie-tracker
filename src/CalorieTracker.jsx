@@ -174,6 +174,7 @@ export default function CalorieTracker() {
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginTop: 2 }}>
                     <div style={{ fontSize: 9, color: "#fff", letterSpacing: 2, whiteSpace: "nowrap" }}>{label}</div>
+                    <div style={{ fontSize: 9, color: "#555", whiteSpace: "nowrap" }}>|</div>
                     <div style={{ fontSize: 9, color: "#fff", letterSpacing: 2, whiteSpace: "nowrap" }}>NET CARBS</div>
                   </div>
                 </>
