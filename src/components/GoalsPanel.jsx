@@ -41,7 +41,7 @@ export default function GoalsPanel({ goals, onChange }) {
         width: "100%", background: "none", border: "none", padding: "14px 20px",
         display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer",
       }}>
-        <span style={{ fontSize: 10, letterSpacing: 3, color: "#fff" }}>GOALS & BUDGET</span>
+        <span style={{ fontSize: 10, letterSpacing: 2, color: "#fff" }}>GOALS & BUDGET</span>
         <span style={{
           fontSize: 12, color: "#777", display: "inline-block",
           transition: "transform 0.2s", transform: open ? "rotate(180deg)" : "rotate(0deg)",
@@ -64,7 +64,7 @@ export default function GoalsPanel({ goals, onChange }) {
             width: "100%", background: "#f97316", border: "none", borderRadius: 8,
             padding: "10px", color: "#fff", fontSize: 13, cursor: "pointer", marginTop: 4,
           }}>
-            Save Goals
+            SAVE GOALS
           </button>
         </div>
       )}

@@ -4,6 +4,7 @@ import GoalsPanel   from "./components/GoalsPanel";
 import FoodLog      from "./components/FoodLog";
 import SearchPanel     from "./components/SearchPanel";
 import DiabetesPanel  from "./components/DiabetesPanel";
+import WeightPanel     from "./components/WeightPanel";
 import { MC, DEFAULT_GOALS } from "./utils/constants";
 import { lsGet, lsSet, todayKey, loadDay, saveDay } from "./utils/storage";
 
@@ -209,6 +210,9 @@ export default function CalorieTracker() {
           Viewing past day — <span onClick={() => switchDay(todayKey())} style={{ color: MC.calories, cursor: "pointer" }}>go to today</span> to add entries.
         </div>
       )}
+
+      {/* weight tracking + insights (hidden in diabetes mode — DiabetesPanel covers weight there) */}
+      {!diabetesMode && <WeightPanel dateKey={dateKey} calorieGoal={BUDGET} />}
 
       {/* diabetes mode toggle + panel */}
       <div style={{ borderTop: "1px solid #2e2e3a", paddingTop: 20, marginTop: 8 }}>

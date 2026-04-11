@@ -17,7 +17,7 @@ export default function FoodLog({ items, onRemove, onEdit }) {
   };
 
   if (items.length === 0) {
-    return <div style={{ fontSize: 12, color: "#666", textAlign: "center", padding: "20px 0" }}>No entries for this day.</div>;
+    return <div style={{ fontSize: 11, color: "#777", textAlign: "center", padding: "20px 0" }}>No entries for this day.</div>;
   }
 
   return (
@@ -61,7 +61,7 @@ export default function FoodLog({ items, onRemove, onEdit }) {
                   ) : (
                     <span
                       onClick={() => startEdit(item)}
-                      style={{ fontSize: 14, fontWeight: 500, color: MC.fat, cursor: "pointer", minWidth: 40, textAlign: "right" }}
+                      style={{ fontSize: 14, fontWeight: 500, color: MC.calories, cursor: "pointer", minWidth: 40, textAlign: "right" }}
                       title="Click to edit"
                     >
                       {item.calories}

@@ -16,5 +16,5 @@ export const MC = {
   carbs:    "#f59e0b",
   fat:      "#f97316",
   calories: "#22c55e",
-  fiber:    "#a37c3c",
+  fiber:    "#d4a850",
 };
