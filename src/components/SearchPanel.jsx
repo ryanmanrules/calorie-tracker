@@ -9,6 +9,61 @@ const USDA_URL = "https://api.nal.usda.gov/fdc/v1";
 // mode can be "search" | "manual" | "plan"
 const MODES = { SEARCH: "search", MANUAL: "manual", PLAN: "plan" };
 
+const smallInput = {
+  width: "100%", background: "#18181f", border: "1px solid #2e2e3a",
+  borderRadius: 8, padding: "7px 10px", color: "#e8e8e8",
+  fontSize: 11, fontFamily: "inherit", outline: "none",
+};
+
+// Defined outside SearchPanel so its identity is stable across re-renders —
+// prevents the qty input from unmounting/remounting (and losing focus) on every keystroke.
+function ResultRow({ food, onAddFn, scState, setScState, qState, setQState, cgState, setCgState, detailCache, mode, diabetesMode }) {
+  const detail    = detailCache[food.fdcId] || food;
+  const servings  = extractServings(food, detail);
+  const choiceIdx = scState[food.fdcId] ?? 0;
+  const chosen    = servings[choiceIdx];
+  const isCustom  = chosen.grams === null;
+  const n         = extractNutrients(detail.foodNutrients || food.foodNutrients || []);
+  return (
+    <div className="result-row" style={{ padding: "12px", borderBottom: "1px solid #28283a" }}>
+      <div style={{ fontSize: 12, color: "#fff", marginBottom: 2 }}>{food.description}</div>
+      <div style={{ fontSize: 10, marginBottom: 10 }}>
+        <span style={{ color: "#fff" }}>per 100g &nbsp;·&nbsp; </span>
+        <span style={{ color: MC.calories }}>{Math.round(n.calories)} kcal</span>
+        <span style={{ color: "#888" }}> &nbsp;·&nbsp; </span>
+        <span style={{ color: MC.protein }}>P:{Math.round(n.protein)}g</span>
+        <span style={{ color: "#888" }}> &nbsp;·&nbsp; </span>
+        <span style={{ color: MC.carbs }}>C:{Math.round(n.carbs)}g</span>
+        <span style={{ color: "#888" }}> &nbsp;·&nbsp; </span>
+        <span style={{ color: MC.fat }}>F:{Math.round(n.fat)}g</span>
+        <span style={{ color: "#888" }}> &nbsp;·&nbsp; </span>
+        <span style={{ color: MC.fiber }}>Fi:{Math.round(n.fiber)}g</span>
+        {diabetesMode && <><span style={{ color: "#888" }}> &nbsp;·&nbsp; </span><span style={{ color: "#f472b6" }}>Su:{Math.round(n.sugar)}g</span></>}
+      </div>
+      <select value={choiceIdx}
+        onChange={(e) => setScState((prev) => ({ ...prev, [food.fdcId]: parseInt(e.target.value) }))}
+        style={{ ...smallInput, marginBottom: 8, cursor: "pointer" }}>
+        {servings.map((s, i) => <option key={i} value={i}>{s.label}</option>)}
+      </select>
+      <div style={{ display: "flex", gap: 6 }}>
+        {isCustom ? (
+          <input type="number" placeholder="Enter grams" value={cgState[food.fdcId] || ""}
+            onChange={(e) => setCgState((prev) => ({ ...prev, [food.fdcId]: e.target.value }))}
+            style={smallInput} />
+        ) : (
+          <input type="number" placeholder="Qty (default 1)" value={qState[food.fdcId] || ""}
+            onChange={(e) => setQState((prev) => ({ ...prev, [food.fdcId]: e.target.value }))}
+            style={smallInput} />
+        )}
+        <button onClick={() => onAddFn(food)}
+          style={{ background: "#f97316", border: "none", borderRadius: 8, padding: "6px 16px", color: "#fff", fontSize: 12, cursor: "pointer", flexShrink: 0 }}>
+          {mode === MODES.PLAN ? "Plan" : "Add"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 let planId = 1;
 
 export default function SearchPanel({ mealTime, setMealTime, onAdd, diabetesMode, weeklyMealAvg }) {
@@ -46,8 +101,6 @@ export default function SearchPanel({ mealTime, setMealTime, onAdd, diabetesMode
     borderRadius: 8, padding: "10px 12px", color: "#e8e8e8",
     fontSize: 13, fontFamily: "inherit", outline: "none",
   };
-
-  const smallInput = { ...inputStyle, fontSize: 11, padding: "7px 10px" };
 
   // ── debounced USDA search (regular mode) ─────────────────────────────────
   useEffect(() => {
@@ -217,54 +270,6 @@ export default function SearchPanel({ mealTime, setMealTime, onAdd, diabetesMode
     fontSize: 10, cursor: "pointer", letterSpacing: 1,
   });
 
-  // result row renderer — shared between search and plan modes
-  const ResultRow = ({ food, onAddFn, scState, setScState, qState, setQState, cgState, setCgState }) => {
-    const detail    = detailCache[food.fdcId] || food;
-    const servings  = extractServings(food, detail);
-    const choiceIdx = scState[food.fdcId] ?? 0;
-    const chosen    = servings[choiceIdx];
-    const isCustom  = chosen.grams === null;
-    const n         = extractNutrients(detail.foodNutrients || food.foodNutrients || []);
-    return (
-      <div className="result-row" style={{ padding: "12px", borderBottom: "1px solid #28283a" }}>
-        <div style={{ fontSize: 12, color: "#fff", marginBottom: 2 }}>{food.description}</div>
-        <div style={{ fontSize: 10, marginBottom: 10 }}>
-          <span style={{ color: "#fff" }}>per 100g &nbsp;·&nbsp; </span>
-          <span style={{ color: MC.calories }}>{Math.round(n.calories)} kcal</span>
-          <span style={{ color: "#888" }}> &nbsp;·&nbsp; </span>
-          <span style={{ color: MC.protein }}>P:{Math.round(n.protein)}g</span>
-          <span style={{ color: "#888" }}> &nbsp;·&nbsp; </span>
-          <span style={{ color: MC.carbs }}>C:{Math.round(n.carbs)}g</span>
-          <span style={{ color: "#888" }}> &nbsp;·&nbsp; </span>
-          <span style={{ color: MC.fat }}>F:{Math.round(n.fat)}g</span>
-          <span style={{ color: "#888" }}> &nbsp;·&nbsp; </span>
-          <span style={{ color: MC.fiber }}>Fi:{Math.round(n.fiber)}g</span>
-          {diabetesMode && <><span style={{ color: "#888" }}> &nbsp;·&nbsp; </span><span style={{ color: "#f472b6" }}>Su:{Math.round(n.sugar)}g</span></>}
-        </div>
-        <select value={choiceIdx}
-          onChange={(e) => setScState((prev) => ({ ...prev, [food.fdcId]: parseInt(e.target.value) }))}
-          style={{ ...smallInput, marginBottom: 8, cursor: "pointer" }}>
-          {servings.map((s, i) => <option key={i} value={i}>{s.label}</option>)}
-        </select>
-        <div style={{ display: "flex", gap: 6 }}>
-          {isCustom ? (
-            <input type="number" placeholder="Enter grams" value={cgState[food.fdcId] || ""}
-              onChange={(e) => setCgState((prev) => ({ ...prev, [food.fdcId]: e.target.value }))}
-              style={smallInput} />
-          ) : (
-            <input type="number" placeholder="Qty (default 1)" value={qState[food.fdcId] || ""}
-              onChange={(e) => setQState((prev) => ({ ...prev, [food.fdcId]: e.target.value }))}
-              style={smallInput} />
-          )}
-          <button onClick={() => onAddFn(food)}
-            style={{ background: "#f97316", border: "none", borderRadius: 8, padding: "6px 16px", color: "#fff", fontSize: 12, cursor: "pointer", flexShrink: 0 }}>
-            {mode === MODES.PLAN ? "Plan" : "Add"}
-          </button>
-        </div>
-      </div>
-    );
-  };
-
   return (
     <div style={{ background: "#242430", border: "1px solid #2e2e3a", borderRadius: 16, padding: "20px", marginBottom: 20 }}>
 
@@ -338,7 +343,8 @@ export default function SearchPanel({ mealTime, setMealTime, onAdd, diabetesMode
                 <ResultRow key={food.fdcId} food={food} onAddFn={addFromResult}
                   scState={servingChoice}    setScState={setServingChoice}
                   qState={quantity}          setQState={setQuantity}
-                  cgState={customGrams}      setCgState={setCustomGrams} />
+                  cgState={customGrams}      setCgState={setCustomGrams}
+                  detailCache={detailCache}  mode={mode}  diabetesMode={diabetesMode} />
               ))}
             </div>
           )}
@@ -458,7 +464,8 @@ export default function SearchPanel({ mealTime, setMealTime, onAdd, diabetesMode
                 <ResultRow key={food.fdcId} food={food} onAddFn={addToPlan}
                   scState={planServingChoice}    setScState={setPlanServingChoice}
                   qState={planQuantity}          setQState={setPlanQuantity}
-                  cgState={planCustomGrams}      setCgState={setPlanCustomGrams} />
+                  cgState={planCustomGrams}      setCgState={setPlanCustomGrams}
+                  detailCache={detailCache}  mode={mode}  diabetesMode={diabetesMode} />
               ))}
             </div>
           )}
