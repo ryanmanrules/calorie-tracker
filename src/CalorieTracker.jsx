@@ -22,7 +22,13 @@ export default function CalorieTracker() {
   const [dateKey, setDateKey] = useState(todayKey);
   const [items, setItems]     = useState(() => loadDay(todayKey()));
   const [showCal, setShowCal] = useState(false);
-  const [mealTime, setMealTime]     = useState("Morning");
+  const [mealTime, setMealTime]     = useState(() => {
+    const h = new Date().getHours();
+    if (h >= 5 && h < 12) return "Morning";
+    if (h >= 12 && h < 17) return "Afternoon";
+    if (h >= 17) return "Evening";
+    return "Evening"; // midnight–5am
+  });
   const [diabetesMode, setDiabetesMode] = useState(() => lsGet("ct_diabetes_mode", false));
   const [logKey, setLogKey] = useState(0);
   const calRef = useRef(null);
