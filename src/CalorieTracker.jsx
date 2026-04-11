@@ -79,6 +79,15 @@ export default function CalorieTracker() {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
+  // Switch to today if the date rolls over while the app is open
+  useEffect(() => {
+    const handler = () => {
+      if (!document.hidden && dateKey !== todayKey()) switchDay(todayKey());
+    };
+    document.addEventListener("visibilitychange", handler);
+    return () => document.removeEventListener("visibilitychange", handler);
+  }, [dateKey]);
+
   const totals = items.reduce(
     (acc, i) => ({
       calories: acc.calories + (i.calories || 0),
