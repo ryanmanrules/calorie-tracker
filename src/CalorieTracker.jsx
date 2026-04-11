@@ -2,9 +2,10 @@ import { useState, useRef, useEffect } from "react";
 import MiniCalendar from "./components/MiniCalendar";
 import GoalsPanel   from "./components/GoalsPanel";
 import FoodLog      from "./components/FoodLog";
-import SearchPanel  from "./components/SearchPanel";
+import SearchPanel     from "./components/SearchPanel";
+import DiabetesPanel  from "./components/DiabetesPanel";
 import { MC, DEFAULT_GOALS } from "./utils/constants";
-import { lsGet, todayKey, loadDay, saveDay } from "./utils/storage";
+import { lsGet, lsSet, todayKey, loadDay, saveDay } from "./utils/storage";
 
 let nextId = 1;
 
@@ -20,7 +21,8 @@ export default function CalorieTracker() {
   const [dateKey, setDateKey] = useState(todayKey);
   const [items, setItems]     = useState(() => loadDay(todayKey()));
   const [showCal, setShowCal] = useState(false);
-  const [mealTime, setMealTime] = useState("Morning");
+  const [mealTime, setMealTime]     = useState("Morning");
+  const [diabetesMode, setDiabetesMode] = useState(() => lsGet("ct_diabetes_mode", false));
   const calRef = useRef(null);
 
   const isToday = dateKey === todayKey();
@@ -79,6 +81,13 @@ export default function CalorieTracker() {
 
   const editItem = (id, calories) => {
     setItems((prev) => prev.map((i) => (i.id === id ? { ...i, calories } : i)));
+  };
+
+  const toggleDiabetesMode = () => {
+    setDiabetesMode((v) => {
+      lsSet("ct_diabetes_mode", !v);
+      return !v;
+    });
   };
 
   const card = { background: "#242430", border: "1px solid #2e2e3a", borderRadius: 16, padding: "20px", marginBottom: 20 };
@@ -168,6 +177,25 @@ export default function CalorieTracker() {
           Viewing past day — <span onClick={() => switchDay(todayKey())} style={{ color: MC.calories, cursor: "pointer" }}>go to today</span> to add entries.
         </div>
       )}
+
+      {/* diabetes mode toggle + panel */}
+      <div style={{ borderTop: "1px solid #2e2e3a", paddingTop: 20, marginTop: 8 }}>
+        <button
+          onClick={toggleDiabetesMode}
+          style={{
+            width: "100%", background: diabetesMode ? "#2e2e3a" : "none",
+            border: "1px solid #2e2e3a", borderRadius: 10, padding: "10px 16px",
+            display: "flex", justifyContent: "space-between", alignItems: "center",
+            cursor: "pointer", marginBottom: diabetesMode ? 16 : 0,
+          }}
+        >
+          <span style={{ fontSize: 10, letterSpacing: 3, color: "#fff" }}>DIABETES MODE</span>
+          <span style={{ fontSize: 10, color: diabetesMode ? "#22c55e" : "#555", letterSpacing: 1 }}>
+            {diabetesMode ? "ON" : "OFF"}
+          </span>
+        </button>
+        {diabetesMode && <DiabetesPanel items={items} dateKey={dateKey} />}
+      </div>
 
       <div style={{ fontSize: 10, color: "#777", textAlign: "center", letterSpacing: 1, marginTop: 8 }}>
         USDA FOODDATA CENTRAL
