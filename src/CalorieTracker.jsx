@@ -6,7 +6,7 @@ import SearchPanel     from "./components/SearchPanel";
 import DiabetesPanel  from "./components/DiabetesPanel";
 import WeightPanel     from "./components/WeightPanel";
 import { MC, DEFAULT_GOALS } from "./utils/constants";
-import { lsGet, lsSet, todayKey, loadDay, saveDay } from "./utils/storage";
+import { lsGet, lsSet, todayKey, toDateKey, loadDay, saveDay } from "./utils/storage";
 
 let nextId = 1;
 
@@ -24,10 +24,36 @@ export default function CalorieTracker() {
   const [showCal, setShowCal] = useState(false);
   const [mealTime, setMealTime]     = useState("Morning");
   const [diabetesMode, setDiabetesMode] = useState(() => lsGet("ct_diabetes_mode", false));
+  const [logKey, setLogKey] = useState(0);
   const calRef = useRef(null);
 
   const isToday = dateKey === todayKey();
   const BUDGET  = goals.calories || 2300;
+
+  // consecutive days with at least one entry, ending today
+  const streak = (() => {
+    let count = 0;
+    const today = new Date();
+    for (let i = 0; i < 365; i++) {
+      const d = new Date(today); d.setDate(today.getDate() - i);
+      const dk = toDateKey(d);
+      const hasData = dk === dateKey ? items.length > 0 : loadDay(dk).length > 0;
+      if (!hasData) break;
+      count++;
+    }
+    return count;
+  })();
+
+  // last 7 days for the adherence dots
+  const weekDots = (() => {
+    const today = new Date();
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(today); d.setDate(today.getDate() - (6 - i));
+      const dk = toDateKey(d);
+      const hasData = dk === dateKey ? items.length > 0 : loadDay(dk).length > 0;
+      return { dk, hasData, isToday: 6 - i === 0 };
+    });
+  })();
 
   // Persist the current day's items on every change
   useEffect(() => { saveDay(dateKey, items); }, [items, dateKey]);
@@ -62,6 +88,7 @@ export default function CalorieTracker() {
   const remaining = BUDGET - totals.calories;
   const pct       = Math.min((totals.calories / BUDGET) * 100, 100);
   const barColor  = pct < 70 ? "#22c55e" : pct < 90 ? "#f97316" : "#ef4444";
+  const dayComplete = items.length > 0 && totals.calories >= BUDGET * 0.75 && totals.calories <= BUDGET * 1.05;
 
   // Returns null when no goal is set (pill renders in its default color),
   // true/false when there is one so we can drive border and progress bar color
@@ -93,7 +120,10 @@ export default function CalorieTracker() {
     return days.length ? Math.round(days.reduce((a, b) => a + b, 0) / days.length) : null;
   })();
 
-  const addItem = (item) => setItems((prev) => [...prev, { id: nextId++, ...item }]);
+  const addItem = (item) => {
+    setItems((prev) => [...prev, { id: nextId++, ...item }]);
+    setLogKey((k) => k + 1);
+  };
 
   const removeItem = (id) => setItems((prev) => prev.filter((i) => i.id !== id));
 
@@ -108,7 +138,14 @@ export default function CalorieTracker() {
     });
   };
 
-  const card = { background: "#242430", border: "1px solid #2e2e3a", borderRadius: 16, padding: "20px", marginBottom: 20 };
+  const card = {
+    background: "#242430",
+    border: dayComplete ? "1px solid #22c55e55" : "1px solid #2e2e3a",
+    borderRadius: 16, padding: "20px", marginBottom: 20,
+    boxShadow: dayComplete ? "0 0 0 1px #22c55e22, 0 4px 24px #22c55e18" : "none",
+    transition: "border 0.4s ease, box-shadow 0.4s ease",
+    position: "relative",
+  };
 
   return (
     <div style={{ minHeight: "100vh", background: "#18181f", color: "#e8e8e8", fontFamily: "'DM Mono', 'Courier New', monospace", padding: "32px 20px", maxWidth: 580, margin: "0 auto" }}>
@@ -127,28 +164,62 @@ export default function CalorieTracker() {
         .date-btn:hover { background: #2a2a38 !important; }
         input::placeholder { color: #777; }
         select option { background: #242430; }
+        @keyframes cal-pop {
+          0%   { transform: scale(1); }
+          45%  { transform: scale(1.08); }
+          100% { transform: scale(1); }
+        }
+        .cal-pop { animation: cal-pop 350ms cubic-bezier(0.34, 1.56, 0.64, 1); display: inline-block; }
+        .dot-glow { box-shadow: 0 0 0 2px #18181f, 0 0 0 3.5px #22c55e88; }
       `}</style>
 
-      {/* date display + calendar toggle */}
-      <div style={{ marginBottom: 28 }}>
-        <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 28, fontWeight: 800, letterSpacing: -1, color: "#fff" }}>TODAY'S INTAKE</div>
-        <div style={{ position: "relative", display: "inline-block" }} ref={calRef}>
-          <button className="date-btn" onClick={() => setShowCal((v) => !v)} style={{ background: "none", border: "none", padding: "4px 0", cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{ fontSize: 11, color: "#fff", letterSpacing: 2 }}>{formatDisplay(dateKey)}</span>
-            <span style={{ fontSize: 10, color: "#777" }}>▾</span>
-          </button>
-          {!isToday && (
-            <button onClick={() => switchDay(todayKey())} style={{ marginLeft: 8, background: "#242430", border: "1px solid #2e2e3a", borderRadius: 6, padding: "2px 8px", color: MC.calories, fontSize: 10, cursor: "pointer" }}>Today</button>
-          )}
-          {showCal && <MiniCalendar current={dateKey} onChange={switchDay} onClose={() => setShowCal(false)} />}
+      {/* date display + streak */}
+      <div style={{ marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+        <div>
+          <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 28, fontWeight: 800, letterSpacing: -1, color: "#fff" }}>TODAY'S INTAKE</div>
+          <div style={{ position: "relative", display: "inline-block" }} ref={calRef}>
+            <button className="date-btn" onClick={() => setShowCal((v) => !v)} style={{ background: "none", border: "none", padding: "4px 0", cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ fontSize: 11, color: "#fff", letterSpacing: 2 }}>{formatDisplay(dateKey)}</span>
+              <span style={{ fontSize: 10, color: "#777" }}>▾</span>
+            </button>
+            {!isToday && (
+              <button onClick={() => switchDay(todayKey())} style={{ marginLeft: 8, background: "#242430", border: "1px solid #2e2e3a", borderRadius: 6, padding: "2px 8px", color: MC.calories, fontSize: 10, cursor: "pointer" }}>Today</button>
+            )}
+            {showCal && <MiniCalendar current={dateKey} onChange={switchDay} onClose={() => setShowCal(false)} />}
+          </div>
         </div>
+        {streak >= 1 && (
+          <div style={{ textAlign: "right", flexShrink: 0, marginLeft: 12 }}>
+            <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 26, fontWeight: 800, color: "#f97316", lineHeight: 1 }}>{streak}</div>
+            <div style={{ fontSize: 9, color: "#777", letterSpacing: 2, marginTop: 2 }}>DAY STREAK</div>
+          </div>
+        )}
+      </div>
+
+      {/* weekly adherence dots */}
+      <div style={{ display: "flex", justifyContent: "center", gap: 10, marginBottom: 20 }}>
+        {weekDots.map(({ dk, hasData, isToday: isTodayDot }) => (
+          <button key={dk} onClick={() => switchDay(dk)} title={dk}
+            className={isTodayDot ? "dot-glow" : ""}
+            style={{ width: 10, height: 10, borderRadius: "50%", border: "none", padding: 0, cursor: "pointer",
+              background: hasData ? "#22c55e" : "#2e2e3a",
+              opacity: hasData ? 1 : 0.45,
+              transition: "background 0.3s ease",
+            }}
+          />
+        ))}
       </div>
 
       {/* calorie totals + macro progress */}
       <div style={card}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 14 }}>
+        {dayComplete && (
+          <div style={{ position: "absolute", top: 14, right: 16, fontSize: 9, letterSpacing: 2, color: "#22c55e", background: "#22c55e18", border: "1px solid #22c55e44", borderRadius: 6, padding: "3px 7px" }}>
+            ✓ ON TRACK
+          </div>
+        )}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 14, paddingTop: dayComplete ? 22 : 0, transition: "padding-top 0.4s ease" }}>
           <div>
-            <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 42, fontWeight: 800, color: "#fff", lineHeight: 1 }}>{totals.calories.toLocaleString()}</div>
+            <div key={logKey} className={logKey > 0 ? "cal-pop" : ""} style={{ fontFamily: "'Syne', sans-serif", fontSize: 42, fontWeight: 800, color: "#fff", lineHeight: 1 }}>{totals.calories.toLocaleString()}</div>
             <div style={{ fontSize: 11, color: "#fff", letterSpacing: 2, marginTop: 4 }}>CALORIES</div>
           </div>
           <div style={{ textAlign: "right" }}>
