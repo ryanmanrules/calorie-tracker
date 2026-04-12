@@ -6,8 +6,8 @@
   "scope": "/calorie-tracker/",
   "display": "standalone",
   "orientation": "portrait",
-  "theme_color": "#242430",
-  "background_color": "#242430",
+  "theme_color": "#18181f",
+  "background_color": "#18181f",
   "icons": [
     {
       "src": "/calorie-tracker/favicon.svg",

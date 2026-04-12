@@ -1,12 +1,8 @@
 *, *::before, *::after { box-sizing: border-box; }
 
-html, body {
+body {
   margin: 0;
-  background-color: #242430;
+  background-color: #18181f;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
-
-/* hide scrollbar on Android PWA without disabling scroll */
-::-webkit-scrollbar { display: none; }
-* { scrollbar-width: none; }
