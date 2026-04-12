@@ -152,6 +152,8 @@ export default function SearchPanel({ mealTime, setMealTime, onAdd, diabetesMode
   const [plannedItems, setPlannedItems] = useState([]);
   const [planNote, setPlanNote]         = useState("");
   const [planInsulin, setPlanInsulin]   = useState("");
+  const [planManualOpen, setPlanManualOpen] = useState(false);
+  const [planManual, setPlanManual]     = useState({ name: "", calories: "", protein: "", carbs: "", fat: "", fiber: "", sugar: "" });
 
   // search within plan mode
   const [planQuery, setPlanQuery]       = useState("");
@@ -315,6 +317,20 @@ export default function SearchPanel({ mealTime, setMealTime, onAdd, diabetesMode
     const item = buildFromResult(food, planServingChoice, planQuantity, planCustomGrams);
     setPlannedItems((prev) => [...prev, { ...item, id: planId++ }]);
     setPlanQuery(""); setPlanResults([]); setPlanServingChoice({}); setPlanQuantity({}); setPlanCustomGrams({});
+  };
+
+  const addManualToPlan = () => {
+    if (!planManual.name.trim() || !planManual.calories) return;
+    setPlannedItems((prev) => [...prev, {
+      id: planId++,
+      name: planManual.name.trim(), time: mealTime,
+      calories: parseInt(planManual.calories) || 0, protein: parseInt(planManual.protein) || 0,
+      carbs: parseInt(planManual.carbs) || 0, fat: parseInt(planManual.fat) || 0,
+      fiber: parseInt(planManual.fiber) || 0, sugar: parseInt(planManual.sugar) || 0,
+      grams: null, serving: "manual entry",
+    }]);
+    setPlanManual({ name: "", calories: "", protein: "", carbs: "", fat: "", fiber: "", sugar: "" });
+    setPlanManualOpen(false);
   };
 
   const removeFromPlan = (id) => setPlannedItems((prev) => prev.filter((i) => i.id !== id));
@@ -599,6 +615,41 @@ export default function SearchPanel({ mealTime, setMealTime, onAdd, diabetesMode
                   detailCache={detailCache}  mode={mode}  diabetesMode={diabetesMode}
                   mealTime={mealTime}        todayNetCarbs={todayNetCarbs} />
               ))}
+            </div>
+          )}
+
+          {/* manual entry toggle */}
+          <button onClick={() => setPlanManualOpen((v) => !v)} style={{
+            width: "100%", marginTop: 10, background: "none",
+            border: "1px dashed #2e2e3a", borderRadius: 8, padding: "7px",
+            color: planManualOpen ? "#fff" : "#555", fontSize: 11,
+            cursor: "pointer", fontFamily: "inherit", letterSpacing: 1,
+          }}>
+            {planManualOpen ? "✕  CANCEL MANUAL ENTRY" : "+ MANUAL ENTRY"}
+          </button>
+
+          {planManualOpen && (
+            <div style={{ marginTop: 8, background: "#18181f", border: "1px solid #2a2a38", borderRadius: 10, padding: "12px" }}>
+              <input placeholder="Food name (required)" value={planManual.name}
+                onChange={(e) => setPlanManual((p) => ({ ...p, name: e.target.value }))}
+                style={{ ...inputStyle, marginBottom: 8 }} />
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
+                {[
+                  { key: "calories", label: "Calories",    color: MC.calories },
+                  { key: "protein",  label: "Protein (g)", color: MC.protein  },
+                  { key: "carbs",    label: "Carbs (g)",   color: MC.carbs    },
+                  { key: "fat",      label: "Fat (g)",     color: MC.fat      },
+                  { key: "fiber",    label: "Fiber (g)",   color: MC.fiber    },
+                  { key: "sugar",    label: "Sugar (g)",   color: "#f472b6"   },
+                ].map(({ key, label, color }) => (
+                  <input key={key} type="number" placeholder={label} value={planManual[key]}
+                    onChange={(e) => setPlanManual((p) => ({ ...p, [key]: e.target.value }))}
+                    style={{ ...inputStyle, borderColor: planManual[key] ? color : "#2e2e3a" }} />
+                ))}
+              </div>
+              <button onClick={addManualToPlan} style={{ width: "100%", background: "#f97316", border: "none", borderRadius: 8, padding: "10px", color: "#fff", fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>
+                ADD TO PLAN
+              </button>
             </div>
           )}
         </div>
