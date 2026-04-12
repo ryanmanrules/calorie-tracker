@@ -12,6 +12,9 @@ const C = {
     deep: "#18181f",
 };
 
+const MEALS = ["Morning", "Afternoon", "Evening", "Snack"];
+const MEAL_COLORS = { Morning: "#60a5fa", Afternoon: "#22c55e", Evening: "#f97316", Snack: "#a78bfa" };
+
 const loadGlucose = () => lsGet("ct_glucose", []);
 const saveGlucose = (log) => lsSet("ct_glucose", log);
 const loadInsulin = () => lsGet("ct_insulin", []);
@@ -217,9 +220,20 @@ export default function DiabetesPanel({ netCarbs, dateKey }) {
             const items = getDayFood(dk);
             const net = items.reduce((a, i) => a + Math.max(0, (i.carbs || 0) - (i.fiber || 0)), 0);
             const cal = items.reduce((a, i) => a + (i.calories || 0), 0);
-            days.push({ dk, label, net, cal, hasData: items.length > 0 });
+            const byMeal = {};
+            for (const m of MEALS) {
+                byMeal[m] = items.filter((i) => i.time === m).reduce((a, i) => a + Math.max(0, (i.carbs || 0) - (i.fiber || 0)), 0);
+            }
+            days.push({ dk, label, net, cal, hasData: items.length > 0, byMeal });
         }
         return days;
+    })();
+
+    // ── today's net carbs by meal slot ───────────────────────────────────────
+    const todayByMeal = (() => {
+        const out = {};
+        for (const m of MEALS) out[m] = (allItems || []).filter((i) => i.time === m).reduce((a, i) => a + Math.max(0, (i.carbs || 0) - (i.fiber || 0)), 0);
+        return out;
     })();
 
     const daysWithData = carbHistory.filter((d) => d.hasData);
@@ -337,6 +351,42 @@ export default function DiabetesPanel({ netCarbs, dateKey }) {
             tips.push({ color: C.blue, label: "HIGH PROTEIN MEAL", text: `Your ${highProtein.meal} ${highProtein.day} had ${highProtein.protein}g of protein. High-protein meals (40g+) can cause a delayed blood sugar rise 3–5 hours after eating. A split bolus strategy may help — ask your care team.` });
         }
 
+        // 6. Dominant carb slot — which meal consistently carries the most carbs
+        const slotTotals = {};
+        for (const m of MEALS) slotTotals[m] = 0;
+        let slotDays = 0;
+        for (let d = 0; d < 7; d++) {
+            const dt = new Date(today + "T12:00:00"); dt.setDate(dt.getDate() - d);
+            const items = getDayFood(dt.toISOString().slice(0, 10));
+            if (!items.length) continue;
+            slotDays++;
+            for (const m of MEALS) slotTotals[m] += items.filter((i) => i.time === m).reduce((a, i) => a + Math.max(0, (i.carbs || 0) - (i.fiber || 0)), 0);
+        }
+        if (slotDays >= 3) {
+            const dominantSlot = MEALS.reduce((a, b) => slotTotals[a] >= slotTotals[b] ? a : b);
+            const dominantAvg = Math.round(slotTotals[dominantSlot] / slotDays);
+            const totalAvgPerDay = Math.round(Object.values(slotTotals).reduce((a, b) => a + b, 0) / slotDays);
+            const pct = totalAvgPerDay > 0 ? Math.round((dominantAvg / totalAvgPerDay) * 100) : 0;
+            if (pct >= 40) {
+                const slotAdvice = dominantSlot === "Evening" || dominantSlot === "Snack"
+                    ? `Shifting some carbs earlier in the day — when insulin sensitivity is typically higher — can reduce overnight glucose swings and improve bolus predictability.`
+                    : `This is normal for many people, but keeping this meal consistent day-to-day makes your bolus dosing more predictable.`;
+                tips.push({ color: MEAL_COLORS[dominantSlot], label: `${dominantSlot.toUpperCase()} IS YOUR CARB PEAK`, text: `Your ${dominantSlot} meals account for ~${pct}% of your daily net carbs (avg ${dominantAvg}g). ${slotAdvice}` });
+            }
+        }
+
+        // 7. Evening carb load (separate from dominant — flags high absolute amount)
+        const eveningAvg = slotDays >= 3 ? Math.round(slotTotals["Evening"] / slotDays) : null;
+        if (eveningAvg !== null && eveningAvg > 45) {
+            tips.push({ color: C.warn, label: "EVENING CARB LOAD", text: `Your evening meals average ${eveningAvg}g net carbs. Evening insulin sensitivity in T1D tends to be lower, making high-carb dinners harder to cover precisely. Distributing carbs more evenly across the day can reduce post-dinner spikes.` });
+        }
+
+        // 8. Late snack carbs
+        const snackAvg = slotDays >= 3 ? Math.round(slotTotals["Snack"] / slotDays) : null;
+        if (snackAvg !== null && snackAvg > 20) {
+            tips.push({ color: "#a78bfa", label: "LATE SNACK CARBS", text: `Your snacks average ${snackAvg}g net carbs. Bedtime carbs can cause overnight glucose rises that are harder to catch while sleeping. If a bedtime snack is needed, lower-carb options (under 15g net) reduce overnight insulin demand.` });
+        }
+
         return tips;
     })();
 
@@ -421,10 +471,21 @@ export default function DiabetesPanel({ netCarbs, dateKey }) {
                     <strong style={{ color: C.danger }}>Hurts:</strong> High or erratic carb intake → blood sugar spikes → higher correction doses → more insulin → harder to lose weight.
                 </>}
             >
-                <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginTop: 4 }}>
+                <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginTop: 4, marginBottom: 8 }}>
                     <span style={{ fontSize: 28, fontWeight: 600, color: netCarbs > 150 ? C.warn : C.good }}>{netCarbs}g</span>
                     <span style={{ fontSize: 11, color: C.muted }}>net carbs</span>
                 </div>
+                {netCarbs > 0 && (
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                        {MEALS.filter((m) => todayByMeal[m] > 0).map((m) => (
+                            <div key={m} style={{ display: "flex", alignItems: "center", gap: 4, background: C.deep, borderRadius: 6, padding: "3px 8px" }}>
+                                <div style={{ width: 6, height: 6, borderRadius: "50%", background: MEAL_COLORS[m], flexShrink: 0 }} />
+                                <span style={{ fontSize: 10, color: "#aaa" }}>{m.slice(0, 3).toUpperCase()}</span>
+                                <span style={{ fontSize: 10, color: MEAL_COLORS[m], fontWeight: 600 }}>{todayByMeal[m]}g</span>
+                            </div>
+                        ))}
+                    </div>
+                )}
             </Section>
 
             {/* Carb pattern */}
@@ -438,20 +499,35 @@ export default function DiabetesPanel({ netCarbs, dateKey }) {
             >
                 {daysWithData.length > 0 ? (
                     <div style={{ marginTop: 4 }}>
-                        <div style={{ display: "flex", alignItems: "flex-end", gap: 4, height: 48, marginBottom: 6 }}>
+                        {/* stacked meal bars */}
+                        <div style={{ display: "flex", alignItems: "flex-end", gap: 4, height: 52, marginBottom: 6 }}>
                             {[...carbHistory].reverse().map((day) => {
                                 const max = Math.max(...carbHistory.filter((d) => d.hasData).map((d) => d.net), 1);
-                                const pct = day.hasData ? Math.max((day.net / max) * 100, 4) : 0;
-                                const color = avgNetCarbs7 !== null && day.net > avgNetCarbs7 * 1.2 ? C.warn
-                                    : avgNetCarbs7 !== null && day.net < avgNetCarbs7 * 0.8 ? C.good : "#60a5fa";
+                                const totalPx = day.hasData ? Math.max((day.net / max) * 52, 4) : 0;
                                 return (
                                     <div key={day.dk} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
-                                        <div style={{ fontSize: 9, color: day.net > 0 ? color : "#333" }}>{day.hasData ? day.net : ""}</div>
-                                        <div style={{ width: "100%", height: `${pct}%`, background: day.hasData ? color : "#222", borderRadius: "3px 3px 0 0", minHeight: day.hasData ? 4 : 0, transition: "height 0.3s ease" }} />
+                                        <div style={{ fontSize: 9, color: day.hasData ? (avgNetCarbs7 !== null && day.net > avgNetCarbs7 * 1.2 ? C.warn : avgNetCarbs7 !== null && day.net < avgNetCarbs7 * 0.8 ? C.good : "#aaa") : "#333" }}>
+                                            {day.hasData ? day.net : ""}
+                                        </div>
+                                        <div style={{ width: "100%", height: totalPx, display: "flex", flexDirection: "column-reverse", borderRadius: "3px 3px 0 0", overflow: "hidden" }}>
+                                            {day.hasData ? MEALS.map((m) => {
+                                                const segH = day.net > 0 ? (day.byMeal[m] / day.net) * totalPx : 0;
+                                                return segH > 0 ? <div key={m} style={{ width: "100%", height: segH, background: MEAL_COLORS[m], flexShrink: 0 }} /> : null;
+                                            }) : <div style={{ width: "100%", height: 4, background: "#222" }} />}
+                                        </div>
                                         <div style={{ fontSize: 8, color: "#555", letterSpacing: 0.5 }}>{day.label.slice(0, 3)}</div>
                                     </div>
                                 );
                             })}
+                        </div>
+                        {/* meal color legend */}
+                        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 8 }}>
+                            {MEALS.map((m) => (
+                                <div key={m} style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                                    <div style={{ width: 7, height: 7, borderRadius: "50%", background: MEAL_COLORS[m] }} />
+                                    <span style={{ fontSize: 9, color: C.muted }}>{m}</span>
+                                </div>
+                            ))}
                         </div>
                         {avgNetCarbs7 !== null && (
                             <div style={{ fontSize: 10, color: C.muted, marginBottom: 6 }}>Avg: <span style={{ color: "#fff" }}>{avgNetCarbs7}g</span> net carbs/day</div>
