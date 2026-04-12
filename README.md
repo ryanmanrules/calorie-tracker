@@ -1,6 +1,6 @@
 # Calorie Tracker
 
-A fast, mobile-first PWA for daily calorie and macro tracking. Built for personal use with an optional T1D (Type 1 Diabetes) mode that surfaces clinically-informed insulin and dosing guidance.
+A fast PWA for daily calorie and macro tracking. Built for personal use with an optional T1D (Type 1 Diabetes) mode that surfaces clinically-informed insulin and dosing guidance.
 
 **[Open the app](https://ryanmanrules.github.io/calorie-tracker/)**
 
