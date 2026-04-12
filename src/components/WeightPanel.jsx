@@ -144,6 +144,7 @@ function analyzeWeightChange(weightLog, dateKey) {
 export default function WeightPanel({ dateKey, calorieGoal }) {
     const [weightLog, setWeightLog] = useState(loadWeight);
     const [wValue, setWValue] = useState("");
+    const [insightsOpen, setInsightsOpen] = useState(false);
 
     const today = dateKey;
     const yesterday = (() => {
@@ -262,17 +263,39 @@ export default function WeightPanel({ dateKey, calorieGoal }) {
     const allInsights = [...weightWarnings, ...weightInsights, ...generalInsights];
 
     return (
-        <div style={{ marginTop: 20 }}>
-            {/* weight entry + stats */}
-            <Section
-                title="WEIGHT"
-                accentColor={C.blue}
-                subtitle={
-                    todayEntry
-                        ? `${todayEntry.value} lbs today${weightDelta !== null ? `  ${trendLabel} ${Math.abs(weightDelta)} lb vs yesterday` : ""}${avg7 !== null ? `  ·  ${avg7.toFixed(1)} avg` : ""}`
-                        : "Log today's weight to track trends"
-                }
-            >
+        <div style={{ marginTop: 20, background: C.card, border: `1px solid ${C.blue}22`, borderRadius: 12, overflow: "hidden" }}>
+            {/* header row */}
+            <div style={{ padding: "12px 14px", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 10, letterSpacing: 2, color: C.blue }}>WEIGHT</div>
+                    <div style={{ fontSize: 10, color: C.muted, marginTop: 3, lineHeight: 1.5 }}>
+                        {todayEntry
+                            ? `${todayEntry.value} lbs today${weightDelta !== null ? `  ${trendLabel} ${Math.abs(weightDelta)} lb vs yesterday` : ""}${avg7 !== null ? `  ·  ${avg7.toFixed(1)} avg` : ""}`
+                            : "Log today's weight to track trends"}
+                    </div>
+                </div>
+                {allInsights.length > 0 && (
+                    <button onClick={() => setInsightsOpen(v => !v)} style={{
+                        background: insightsOpen ? "#2e2e3a" : "none",
+                        border: `1px solid ${C.border}`, borderRadius: 6,
+                        padding: "2px 8px", cursor: "pointer",
+                        display: "flex", alignItems: "center", gap: 5,
+                        flexShrink: 0, marginLeft: 10,
+                    }}>
+                        <span style={{ fontSize: 9, color: insightsOpen ? "#fff" : C.muted, letterSpacing: 1 }}>
+                            {insightsOpen ? "LESS" : `${allInsights.length} INSIGHT${allInsights.length > 1 ? "S" : ""}`}
+                        </span>
+                        {!insightsOpen && (
+                            <span style={{ fontSize: 8, background: C.blue, color: "#000", borderRadius: "50%", width: 14, height: 14, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700 }}>
+                                {allInsights.length}
+                            </span>
+                        )}
+                    </button>
+                )}
+            </div>
+
+            {/* input + sparkline */}
+            <div style={{ padding: "0 14px 14px" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
                     <input
                         type="text"
@@ -302,18 +325,21 @@ export default function WeightPanel({ dateKey, calorieGoal }) {
                         </span>
                     </div>
                 )}
-            </Section>
+            </div>
 
-            {/* insights */}
-            {allInsights.length > 0 && (
-                <div>
+            {/* expandable insights */}
+            {insightsOpen && allInsights.length > 0 && (
+                <div style={{ borderTop: `1px solid ${C.border}` }}>
                     {allInsights.map((tip, i) => (
-                        <Section
-                            key={i}
-                            title={tip.label || "INSIGHT"}
-                            subtitle={tip.text}
-                            accentColor={tip.color}
-                        />
+                        <div key={i} style={{
+                            padding: "10px 14px",
+                            borderBottom: i < allInsights.length - 1 ? `1px solid ${C.border}` : "none",
+                        }}>
+                            <div style={{ fontSize: 9, letterSpacing: 2, color: tip.color, marginBottom: 4 }}>
+                                {tip.label || "INSIGHT"}
+                            </div>
+                            <div style={{ fontSize: 10, color: "#aaa", lineHeight: 1.7 }}>{tip.text}</div>
+                        </div>
                     ))}
                 </div>
             )}
