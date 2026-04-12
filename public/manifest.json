@@ -1,0 +1,19 @@
+{
+  "name": "Calorie Tracker",
+  "short_name": "Cal Tracker",
+  "description": "Daily calorie and macro tracking with T1D diabetes mode",
+  "start_url": "/calorie-tracker/",
+  "scope": "/calorie-tracker/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#18181f",
+  "background_color": "#18181f",
+  "icons": [
+    {
+      "src": "/calorie-tracker/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
