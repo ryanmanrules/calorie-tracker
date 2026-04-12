@@ -93,6 +93,8 @@ export default function SearchPanel({ mealTime, setMealTime, onAdd, diabetesMode
   const [planQuantity, setPlanQuantity]           = useState({});
   const [planCustomGrams, setPlanCustomGrams]     = useState({});
 
+  const [dataType, setDataType] = useState("Foundation,SR Legacy");
+
   const searchTimeout = useRef(null);
   const planTimeout   = useRef(null);
 
@@ -102,6 +104,11 @@ export default function SearchPanel({ mealTime, setMealTime, onAdd, diabetesMode
     fontSize: 13, fontFamily: "inherit", outline: "none",
   };
 
+  const buildSearchUrl = (q, size) => {
+    const base = `${USDA_URL}/foods/search?query=${encodeURIComponent(q)}&pageSize=${size}&api_key=${USDA_KEY}`;
+    return dataType ? `${base}&dataType=${encodeURIComponent(dataType)}` : base;
+  };
+
   // ── debounced USDA search (regular mode) ─────────────────────────────────
   useEffect(() => {
     if (!query.trim()) { setResults([]); setSearchErr(""); return; }
@@ -109,13 +116,13 @@ export default function SearchPanel({ mealTime, setMealTime, onAdd, diabetesMode
     searchTimeout.current = setTimeout(async () => {
       setSearching(true); setSearchErr("");
       try {
-        const res  = await fetch(`${USDA_URL}/foods/search?query=${encodeURIComponent(query)}&pageSize=6&api_key=${USDA_KEY}`);
+        const res  = await fetch(buildSearchUrl(query, 6));
         const data = await res.json();
         setResults(data.foods || []);
       } catch { setSearchErr("Search failed. Check your connection."); }
       finally { setSearching(false); }
     }, 500);
-  }, [query]);
+  }, [query, dataType]);
 
   // ── debounced USDA search (plan mode) ────────────────────────────────────
   useEffect(() => {
@@ -124,13 +131,13 @@ export default function SearchPanel({ mealTime, setMealTime, onAdd, diabetesMode
     planTimeout.current = setTimeout(async () => {
       setPlanSearching(true);
       try {
-        const res  = await fetch(`${USDA_URL}/foods/search?query=${encodeURIComponent(planQuery)}&pageSize=5&api_key=${USDA_KEY}`);
+        const res  = await fetch(buildSearchUrl(planQuery, 5));
         const data = await res.json();
         setPlanResults(data.foods || []);
       } catch {}
       finally { setPlanSearching(false); }
     }, 500);
-  }, [planQuery]);
+  }, [planQuery, dataType]);
 
   const fetchDetail = async (fdcId) => {
     if (detailCache[fdcId]) return detailCache[fdcId];
@@ -262,6 +269,14 @@ export default function SearchPanel({ mealTime, setMealTime, onAdd, diabetesMode
   const storedList    = [...favorites, ...recentNonFavs];
   const showStored    = mode === MODES.SEARCH && storedList.length > 0 && !query.trim();
 
+  // data type filter toggle style
+  const dtBtn = (val) => ({
+    background: dataType === val ? "#2e2e3a" : "none",
+    border: "1px solid #2e2e3a", borderRadius: 6,
+    padding: "3px 9px", color: dataType === val ? "#fff" : "#555",
+    fontSize: 9, cursor: "pointer", letterSpacing: 1,
+  });
+
   // mode button style
   const modeBtn = (m) => ({
     background: mode === m ? "#2e2e3a" : "none",
@@ -293,7 +308,12 @@ export default function SearchPanel({ mealTime, setMealTime, onAdd, diabetesMode
       {/* ── SEARCH mode ─────────────────────────────────────────────────── */}
       {mode === MODES.SEARCH && (
         <>
-          <input placeholder="Search food..." value={query} onChange={(e) => setQuery(e.target.value)} style={{ ...inputStyle, marginBottom: 4 }} />
+          <input placeholder="Search food..." value={query} onChange={(e) => setQuery(e.target.value)} style={{ ...inputStyle, marginBottom: 8 }} />
+          <div style={{ display: "flex", gap: 4, marginBottom: 6 }}>
+            <button style={dtBtn("Foundation,SR Legacy")} onClick={() => setDataType("Foundation,SR Legacy")}>WHOLE FOODS</button>
+            <button style={dtBtn("Branded")} onClick={() => setDataType("Branded")}>BRANDED</button>
+            <button style={dtBtn("")} onClick={() => setDataType("")}>ALL</button>
+          </div>
           {searching && <div style={{ fontSize: 11, color: "#fff", padding: "6px 2px" }}>Searching...</div>}
           {searchErr  && <div style={{ fontSize: 11, color: "#ef4444", padding: "6px 2px" }}>{searchErr}</div>}
 
@@ -455,7 +475,12 @@ export default function SearchPanel({ mealTime, setMealTime, onAdd, diabetesMode
           {/* plan search */}
           <input placeholder="Search food to add to plan..." value={planQuery}
             onChange={(e) => setPlanQuery(e.target.value)}
-            style={{ ...inputStyle, marginBottom: 4 }} />
+            style={{ ...inputStyle, marginBottom: 8 }} />
+          <div style={{ display: "flex", gap: 4, marginBottom: 6 }}>
+            <button style={dtBtn("Foundation,SR Legacy")} onClick={() => setDataType("Foundation,SR Legacy")}>WHOLE FOODS</button>
+            <button style={dtBtn("Branded")} onClick={() => setDataType("Branded")}>BRANDED</button>
+            <button style={dtBtn("")} onClick={() => setDataType("")}>ALL</button>
+          </div>
           {planSearching && <div style={{ fontSize: 11, color: "#fff", padding: "6px 2px" }}>Searching...</div>}
 
           {planResults.length > 0 && (
