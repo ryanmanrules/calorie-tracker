@@ -201,6 +201,8 @@ export default function DiabetesPanel({ netCarbs, dateKey }) {
     const [iDose, setIDose] = useState("");
     const [iNote, setINote] = useState("");
     const [wValue, setWValue] = useState("");
+    const [t1dInsightsOpen, setT1dInsightsOpen] = useState(false);
+    const [weightInsightsOpen, setWeightInsightsOpen] = useState(false);
 
     const today = dateKey;
     const yesterday = (() => { const d = new Date(dateKey + "T12:00:00"); d.setDate(d.getDate() - 1); return d.toISOString().slice(0, 10); })();
@@ -375,19 +377,38 @@ export default function DiabetesPanel({ netCarbs, dateKey }) {
             {/* T1D insights */}
             {t1dInsights.length > 0 && (
                 <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, marginBottom: 12, overflow: "hidden" }}>
-                    <div style={{ padding: "12px 14px 8px" }}>
-                        <div style={{ fontSize: 10, letterSpacing: 2, color: "#fff" }}>INSIGHTS</div>
-                        <div style={{ fontSize: 10, color: C.muted, marginTop: 3 }}>Based on your logged data this week.</div>
+                    <div style={{ padding: "12px 14px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <div>
+                            <div style={{ fontSize: 10, letterSpacing: 2, color: "#fff" }}>INSIGHTS</div>
+                            <div style={{ fontSize: 10, color: C.muted, marginTop: 3 }}>Based on your logged data this week.</div>
+                        </div>
+                        <button onClick={() => setT1dInsightsOpen(v => !v)} style={{
+                            background: t1dInsightsOpen ? "#2e2e3a" : "none",
+                            border: `1px solid ${C.border}`, borderRadius: 6,
+                            padding: "2px 8px", cursor: "pointer",
+                            display: "flex", alignItems: "center", gap: 5, flexShrink: 0, marginLeft: 10,
+                        }}>
+                            <span style={{ fontSize: 9, color: t1dInsightsOpen ? "#fff" : C.muted, letterSpacing: 1 }}>
+                                {t1dInsightsOpen ? "LESS" : `${t1dInsights.length} INSIGHT${t1dInsights.length > 1 ? "S" : ""}`}
+                            </span>
+                            {!t1dInsightsOpen && (
+                                <span style={{ fontSize: 8, background: "#60a5fa", color: "#000", borderRadius: "50%", width: 14, height: 14, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700 }}>
+                                    {t1dInsights.length}
+                                </span>
+                            )}
+                        </button>
                     </div>
-                    <div style={{ padding: "0 14px 14px" }}>
-                        {t1dInsights.map((tip, i) => (
-                            <div key={i} style={{ padding: "10px 12px", background: C.deep, borderRadius: 8, borderLeft: `3px solid ${tip.color}`, marginBottom: i < t1dInsights.length - 1 ? 8 : 0 }}>
-                                <div style={{ fontSize: 9, letterSpacing: 2, color: tip.color, marginBottom: 4 }}>{tip.label}</div>
-                                <div style={{ fontSize: 11, color: "#bbb", lineHeight: 1.6 }}>{tip.text}</div>
-                            </div>
-                        ))}
-                        <div style={{ fontSize: 10, color: "#444", marginTop: 8 }}>Not medical advice — consult your care team before making changes.</div>
-                    </div>
+                    {t1dInsightsOpen && (
+                        <div style={{ padding: "0 14px 14px", borderTop: `1px solid ${C.border}` }}>
+                            {t1dInsights.map((tip, i) => (
+                                <div key={i} style={{ padding: "10px 12px", background: C.deep, borderRadius: 8, borderLeft: `3px solid ${tip.color}`, marginBottom: i < t1dInsights.length - 1 ? 8 : 0, marginTop: i === 0 ? 12 : 0 }}>
+                                    <div style={{ fontSize: 9, letterSpacing: 2, color: tip.color, marginBottom: 4 }}>{tip.label}</div>
+                                    <div style={{ fontSize: 11, color: "#bbb", lineHeight: 1.6 }}>{tip.text}</div>
+                                </div>
+                            ))}
+                            <div style={{ fontSize: 10, color: "#444", marginTop: 8 }}>Not medical advice — consult your care team before making changes.</div>
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -477,29 +498,41 @@ export default function DiabetesPanel({ netCarbs, dateKey }) {
                             )}
                         </div>
                         {sparkData.length >= 2 && <div style={{ marginBottom: 10 }}><Sparkline data={sparkData} color={trendColor} /></div>}
-                        <div style={{ display: "flex", gap: 6, marginBottom: weightWarnings.length || weightInsights.length ? 10 : 0 }}>
+                        <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 0 }}>
                             <input type="number" placeholder="Update today's weight" value={wValue} onChange={(e) => setWValue(e.target.value)} step="0.1" style={{ ...input, fontSize: 11 }} />
                             <button onClick={logWeight} style={{ ...logBtn, fontSize: 11, padding: "6px 12px" }}>Update</button>
+                            {(weightWarnings.length + weightInsights.length) > 0 && (
+                                <button onClick={() => setWeightInsightsOpen(v => !v)} style={{
+                                    background: weightInsightsOpen ? "#2e2e3a" : "none",
+                                    border: `1px solid ${C.border}`, borderRadius: 6,
+                                    padding: "2px 8px", cursor: "pointer",
+                                    display: "flex", alignItems: "center", gap: 5, flexShrink: 0,
+                                }}>
+                                    <span style={{ fontSize: 9, color: weightInsightsOpen ? "#fff" : C.muted, letterSpacing: 1 }}>
+                                        {weightInsightsOpen ? "LESS" : "INSIGHTS"}
+                                    </span>
+                                    {!weightInsightsOpen && (
+                                        <span style={{ fontSize: 8, background: "#60a5fa", color: "#000", borderRadius: "50%", width: 14, height: 14, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700 }}>
+                                            {weightWarnings.length + weightInsights.length}
+                                        </span>
+                                    )}
+                                </button>
+                            )}
                         </div>
-                        {weightWarnings.length > 0 && (
-                            <div style={{ marginBottom: 8 }}>
+                        {weightInsightsOpen && (
+                            <div style={{ marginTop: 10 }}>
                                 {weightWarnings.map((w, i) => (
-                                    <div key={i} style={{ padding: "8px 10px", background: C.deep, borderRadius: 8, borderLeft: `3px solid ${w.color}`, marginBottom: 6 }}>
+                                    <div key={`w${i}`} style={{ padding: "8px 10px", background: C.deep, borderRadius: 8, borderLeft: `3px solid ${w.color}`, marginBottom: 6 }}>
                                         <div style={{ fontSize: 11, color: "#fff", fontWeight: 500, marginBottom: 2 }}>⚠ Does this look right?</div>
                                         <div style={{ fontSize: 11, color: "#bbb", lineHeight: 1.6 }}>{w.text}</div>
                                     </div>
                                 ))}
-                            </div>
-                        )}
-                        {weightInsights.length > 0 && (
-                            <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 10 }}>
-                                <div style={{ fontSize: 9, letterSpacing: 2, color: C.muted, marginBottom: 8 }}>YESTERDAY'S PATTERNS</div>
                                 {weightInsights.map((insight, i) => (
-                                    <div key={i} style={{ padding: "8px 10px", background: C.deep, borderRadius: 8, borderLeft: `3px solid ${insight.color}`, marginBottom: 6 }}>
+                                    <div key={`i${i}`} style={{ padding: "8px 10px", background: C.deep, borderRadius: 8, borderLeft: `3px solid ${insight.color}`, marginBottom: 6 }}>
                                         <div style={{ fontSize: 11, color: "#bbb", lineHeight: 1.6 }}>{insight.text}</div>
                                     </div>
                                 ))}
-                                <div style={{ fontSize: 10, color: "#444", marginTop: 6 }}>Not medical advice — patterns based on logged data only.</div>
+                                <div style={{ fontSize: 10, color: "#444", marginTop: 2 }}>Not medical advice — patterns based on logged data only.</div>
                             </div>
                         )}
                     </>
