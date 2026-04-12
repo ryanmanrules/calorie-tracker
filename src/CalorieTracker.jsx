@@ -163,7 +163,7 @@ export default function CalorieTracker() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: "#18181f", color: "#e8e8e8", fontFamily: "'DM Mono', 'Courier New', monospace", padding: "32px 20px", maxWidth: 580, margin: "0 auto" }}>
+    <div style={{ minHeight: "100vh", background: "#242430", color: "#e8e8e8", fontFamily: "'DM Mono', 'Courier New', monospace", padding: "32px 20px", maxWidth: 580, margin: "0 auto" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@700;800&display=swap');
         * { box-sizing: border-box; }
