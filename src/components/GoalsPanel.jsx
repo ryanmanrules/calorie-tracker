@@ -25,10 +25,12 @@ function GoalField({ label, goalKey, placeholder, color, draft, setDraft }) {
   );
 }
 
+// Collapsible panel for editing the calorie budget and optional macro targets.
 export default function GoalsPanel({ goals, onChange }) {
   const [open, setOpen]   = useState(false);
   const [draft, setDraft] = useState(goals);
 
+  // Persist draft goals to localStorage and propagate to parent state.
   const save = () => {
     onChange(draft);
     lsSet("ct_goals", draft);

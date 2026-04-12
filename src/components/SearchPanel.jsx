@@ -183,6 +183,7 @@ export default function SearchPanel({ mealTime, setMealTime, onAdd, diabetesMode
     return body;
   };
 
+  // Execute a USDA food search with the current dataType filter applied.
   const doSearch = (q, size) =>
     fetch(`${USDA_URL}/foods/search?api_key=${USDA_KEY}`, {
       method: "POST",
@@ -254,6 +255,7 @@ export default function SearchPanel({ mealTime, setMealTime, onAdd, diabetesMode
     });
   };
 
+  // Wipe the entire recents list from state and localStorage.
   const clearRecents = () => { setRecents([]); lsSet("ct_recents", []); };
 
   // ── build item from USDA result ──────────────────────────────────────────
@@ -292,6 +294,7 @@ export default function SearchPanel({ mealTime, setMealTime, onAdd, diabetesMode
     setQuery(""); setResults([]); setServingChoice({}); setQuantity({}); setCustomGrams({});
   };
 
+  // Add a manually-entered food item to the log.
   const addManual = () => {
     if (!manual.name.trim() || !manual.calories) return;
     onAdd({
@@ -304,6 +307,7 @@ export default function SearchPanel({ mealTime, setMealTime, onAdd, diabetesMode
     setManual({ name: "", calories: "", protein: "", carbs: "", fat: "", fiber: "", sugar: "" });
   };
 
+  // Log a food from recents or favorites at its stored per-100g nutrients.
   const addFromStored = (stored) => {
     onAdd({
       name: stored.description, time: mealTime,
@@ -321,6 +325,7 @@ export default function SearchPanel({ mealTime, setMealTime, onAdd, diabetesMode
     setPlanQuery(""); setPlanResults([]); setPlanServingChoice({}); setPlanQuantity({}); setPlanCustomGrams({});
   };
 
+  // Add a manually-entered item to the plan staging area.
   const addManualToPlan = () => {
     if (!planManual.name.trim() || !planManual.calories) return;
     setPlannedItems((prev) => [...prev, {
@@ -335,6 +340,7 @@ export default function SearchPanel({ mealTime, setMealTime, onAdd, diabetesMode
     setPlanManualOpen(false);
   };
 
+  // Remove a single item from the plan staging area by id.
   const removeFromPlan = (id) => setPlannedItems((prev) => prev.filter((i) => i.id !== id));
 
   // push all planned items to the food log

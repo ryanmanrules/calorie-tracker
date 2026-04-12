@@ -14,11 +14,14 @@ const C = {
     deep: "#18181f",
 };
 
+// localStorage accessors for the weight log.
 const loadWeight = () => lsGet("ct_weight", []);
 const saveWeight = (log) => lsSet("ct_weight", log);
 
 let wId = 1;
 
+// Compares today's weight against yesterday and the 7-day average to surface
+// likely causes (carb/water weight, calorie intake) as contextual insights.
 function analyzeWeightChange(weightLog, dateKey) {
     const viewDate = new Date(dateKey + "T12:00:00");
     const yDate = new Date(viewDate); yDate.setDate(yDate.getDate() - 1);
@@ -115,6 +118,7 @@ export default function WeightPanel({ dateKey, calorieGoal }) {
         : { warnings: [], insights: [] };
 
     // ── 7-day calorie trend vs goal ───────────────────────────────────────────
+    // Collect daily calorie totals for the last 7 days (days with food logged only).
     const calorieTrend = (() => {
         const days = [];
         for (let d = 0; d < 7; d++) {
@@ -131,6 +135,7 @@ export default function WeightPanel({ dateKey, calorieGoal }) {
     const avgDeficit = avgCals7 !== null && calorieGoal ? calorieGoal - avgCals7 : null;
 
     // ── general insights ──────────────────────────────────────────────────────
+    // Generate week-level insights: calorie deficit/surplus, protein adequacy, fiber, and calorie consistency.
     const generalInsights = (() => {
         const tips = [];
         const daysWithData = [];
@@ -192,6 +197,7 @@ export default function WeightPanel({ dateKey, calorieGoal }) {
     })();
 
     // ── log handler ───────────────────────────────────────────────────────────
+    // Log today's weight, replacing any existing entry for the same date.
     const logWeight = () => {
         if (!wValue) return;
         const val = parseFloat(wValue);
@@ -201,6 +207,7 @@ export default function WeightPanel({ dateKey, calorieGoal }) {
         setWValue("");
     };
 
+    // Delete today's weight entry.
     const removeWeight = () => {
         const updated = weightLog.filter((w) => w.date !== today);
         setWeightLog(updated); saveWeight(updated);

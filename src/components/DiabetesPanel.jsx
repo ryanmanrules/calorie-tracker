@@ -17,6 +17,7 @@ const C = {
 const MEALS = ["Morning", "Afternoon", "Evening", "Snack"];
 const MEAL_COLORS = { Morning: "#60a5fa", Afternoon: "#22c55e", Evening: "#f97316", Snack: "#a78bfa" };
 
+// localStorage accessors for the three diabetes-specific logs.
 const loadGlucose = () => lsGet("ct_glucose", []);
 const saveGlucose = (log) => lsSet("ct_glucose", log);
 const loadInsulin = () => lsGet("ct_insulin", []);
@@ -29,6 +30,7 @@ let gId = 1;
 let iId = 1;
 let wId = 1;
 
+// Returns a color indicating whether a glucose reading is low (blue), high (red), or in range (green).
 const glucoseColor = (type, value) => {
     const ranges = {
         Fasting: { low: 80, high: 130 },
@@ -336,6 +338,7 @@ export default function DiabetesPanel({ netCarbs, allItems, dateKey }) {
     })();
 
     // ── log handlers ─────────────────────────────────────────────────────────
+    // Append a new glucose reading to the log and reset the form.
     const logGlucose = () => {
         if (!gValue) return;
         const entry = { id: gId++, date: today, type: gType, value: parseInt(gValue), note: gNote.trim(), time: new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }) };
@@ -343,6 +346,7 @@ export default function DiabetesPanel({ netCarbs, allItems, dateKey }) {
         setGValue(""); setGNote("");
     };
 
+    // Append a new insulin dose to the log and reset the form.
     const logInsulin = () => {
         if (!iDose) return;
         const entry = { id: iId++, date: today, type: iType, dose: parseFloat(iDose), note: iNote.trim(), time: new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }) };
@@ -350,6 +354,7 @@ export default function DiabetesPanel({ netCarbs, allItems, dateKey }) {
         setIDose(""); setINote("");
     };
 
+    // Log today's weight, replacing any existing entry for the same date.
     const logWeight = () => {
         if (!wValue) return;
         const filtered = weightLog.filter((w) => w.date !== today);
@@ -358,6 +363,7 @@ export default function DiabetesPanel({ netCarbs, allItems, dateKey }) {
         setWValue("");
     };
 
+    // Delete a single glucose or insulin entry by id.
     const removeGlucose = (id) => { const u = glucoseLog.filter((r) => r.id !== id); setGlucoseLog(u); saveGlucose(u); };
     const removeInsulin = (id) => { const u = insulinLog.filter((r) => r.id !== id); setInsulinLog(u); saveInsulin(u); };
 

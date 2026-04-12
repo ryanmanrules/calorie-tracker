@@ -1,3 +1,4 @@
+// Renders a compact SVG polyline from an array of numeric values, with a dot on the last point.
 export default function Sparkline({ data, color }) {
     if (data.length < 2) return null;
     const min = Math.min(...data);

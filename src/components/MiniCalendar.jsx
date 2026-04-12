@@ -14,16 +14,19 @@ export default function MiniCalendar({ current, onChange, onClose }) {
   const daysIn   = new Date(viewYear, viewMonth + 1, 0).getDate();
   const cells    = Array(firstDay).fill(null).concat(Array.from({ length: daysIn }, (_, i) => i + 1));
 
+  // Navigate one month back, wrapping year when needed.
   const prevMonth = () => {
     if (viewMonth === 0) { setViewYear((v) => v - 1); setViewMonth(11); }
     else setViewMonth((v) => v - 1);
   };
 
+  // Navigate one month forward, wrapping year when needed.
   const nextMonth = () => {
     if (viewMonth === 11) { setViewYear((v) => v + 1); setViewMonth(0); }
     else setViewMonth((v) => v + 1);
   };
 
+  // Build the YYYY-MM-DD key for the selected day and pass it to the onChange callback.
   const selectDay = (day) => {
     if (!day) return;
     const key = `${viewYear}-${String(viewMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;

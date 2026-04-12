@@ -10,6 +10,7 @@ import { lsGet, lsSet, todayKey, toDateKey, loadDay, saveDay } from "./utils/sto
 
 let nextId = 1;
 
+// Convert a YYYY-MM-DD key to a human-readable display string (e.g. "SUNDAY, APR 12").
 const formatDisplay = (dateKey) => {
   const [y, m, d] = dateKey.split("-").map(Number);
   return new Date(y, m - 1, d)
@@ -64,6 +65,7 @@ export default function CalorieTracker() {
   // Persist the current day's items on every change
   useEffect(() => { saveDay(dateKey, items); }, [items, dateKey]);
 
+  // Load a different day's food log and update the active date.
   const switchDay = (key) => {
     setDateKey(key);
     setItems(loadDay(key));
@@ -109,6 +111,7 @@ export default function CalorieTracker() {
   // true/false when there is one so we can drive border and progress bar color
   const metMin    = (val, goal) => goal == null ? null : val >= goal;  // protein, fiber: higher is better
   const metMax    = (val, goal) => goal == null ? null : val <= goal;  // carbs, fat: lower is better
+  // Returns a color for goal feedback: grey (no goal set), green (met), red (not met).
   const goalColor = (met) => met == null ? "#888" : met ? "#22c55e" : "#ef4444";
 
   // Drive the summary pills from a single array so adding a new macro is one line
@@ -135,17 +138,21 @@ export default function CalorieTracker() {
     return days.length ? Math.round(days.reduce((a, b) => a + b, 0) / days.length) : null;
   })();
 
+  // Append a new food entry to the current day's log with a unique id.
   const addItem = (item) => {
     setItems((prev) => [...prev, { id: nextId++, ...item }]);
     setLogKey((k) => k + 1);
   };
 
+  // Remove a food entry from the current day's log by id.
   const removeItem = (id) => setItems((prev) => prev.filter((i) => i.id !== id));
 
+  // Update the calorie value of a specific food entry (inline edit from FoodLog).
   const editItem = (id, calories) => {
     setItems((prev) => prev.map((i) => (i.id === id ? { ...i, calories } : i)));
   };
 
+  // Toggle diabetes mode on/off and persist the preference.
   const toggleDiabetesMode = () => {
     setDiabetesMode((v) => {
       lsSet("ct_diabetes_mode", !v);

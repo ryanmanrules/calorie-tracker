@@ -2,15 +2,18 @@ import { useState } from "react";
 import MacroLine from "./MacroLine";
 import { GROUPS, MC } from "../utils/constants";
 
+// Displays logged food items grouped by meal time slot, with inline calorie editing and delete.
 export default function FoodLog({ items, onRemove, onEdit }) {
   const [editId, setEditId]   = useState(null);
   const [editCals, setEditCals] = useState("");
 
+  // Enter inline edit mode for a food item's calorie value.
   const startEdit = (item) => {
     setEditId(item.id);
     setEditCals(item.calories);
   };
 
+  // Commit the edited calorie value and exit inline edit mode.
   const saveEdit = () => {
     onEdit(editId, parseInt(editCals));
     setEditId(null);

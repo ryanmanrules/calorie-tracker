@@ -8,6 +8,7 @@ const C = {
     deep: "#18181f",
 };
 
+// Collapsible card with a title, always-visible subtitle, and an optional INFO toggle for detail text.
 export default function Section({ title, subtitle, detail, children, accentColor }) {
     const [open, setOpen] = useState(false);
     return (
