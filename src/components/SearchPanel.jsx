@@ -387,8 +387,8 @@ export default function SearchPanel({ mealTime, setMealTime, onAdd, diabetesMode
         <>
           <input placeholder="Search food..." value={query} onChange={(e) => setQuery(e.target.value)} style={{ ...inputStyle, marginBottom: 8 }} />
           <div style={{ display: "flex", gap: 4, marginBottom: 6 }}>
-            <button style={dtBtn("Foundation,SR Legacy")} onClick={() => setDataType("Foundation,SR Legacy")}>WHOLE FOODS</button>
-            <button style={dtBtn("Branded")} onClick={() => setDataType("Branded")}>BRANDED</button>
+            <button style={dtBtn("Branded")} onClick={() => setDataType("Branded")}>WHOLE FOODS</button>
+            <button style={dtBtn("Foundation,SR Legacy")} onClick={() => setDataType("Foundation,SR Legacy")}>BRANDED</button>
             <button style={dtBtn("")} onClick={() => setDataType("")}>ALL</button>
           </div>
           {searching && <div style={{ fontSize: 11, color: "#fff", padding: "6px 2px" }}>Searching...</div>}
@@ -583,8 +583,8 @@ export default function SearchPanel({ mealTime, setMealTime, onAdd, diabetesMode
             onChange={(e) => setPlanQuery(e.target.value)}
             style={{ ...inputStyle, marginBottom: 8 }} />
           <div style={{ display: "flex", gap: 4, marginBottom: 6 }}>
-            <button style={dtBtn("Foundation,SR Legacy")} onClick={() => setDataType("Foundation,SR Legacy")}>WHOLE FOODS</button>
-            <button style={dtBtn("Branded")} onClick={() => setDataType("Branded")}>BRANDED</button>
+            <button style={dtBtn("Branded")} onClick={() => setDataType("Branded")}>WHOLE FOODS</button>
+            <button style={dtBtn("Foundation,SR Legacy")} onClick={() => setDataType("Foundation,SR Legacy")}>BRANDED</button>
             <button style={dtBtn("")} onClick={() => setDataType("")}>ALL</button>
           </div>
           {planSearching && <div style={{ fontSize: 11, color: "#fff", padding: "6px 2px" }}>Searching...</div>}
