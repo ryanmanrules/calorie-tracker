@@ -523,6 +523,34 @@ export default function SearchPanel({ mealTime, setMealTime, onAdd, diabetesMode
                 </div>
               )}
 
+              {/* overall meal tips — diabetes mode, based on full plan totals */}
+              {diabetesMode && plannedItems.length > 0 && (() => {
+                const mealTips = getT1DWarnings(
+                  { carbs: planTotals.carbs, fat: planTotals.fat, fiber: planTotals.fiber },
+                  mealTime,
+                  todayNetCarbs
+                );
+                if (!mealTips.length) return null;
+                return (
+                  <div style={{ padding: "10px 12px", borderBottom: "1px solid #28283a" }}>
+                    <div style={{ fontSize: 9, letterSpacing: 2, color: "#777", marginBottom: 8 }}>MEAL TIPS</div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                      {mealTips.map((tip, i) => (
+                        <div key={i} style={{
+                          padding: "7px 10px",
+                          background: "#0e0e18",
+                          borderLeft: `3px solid ${WARN_COLORS[tip.level]}`,
+                          borderRadius: "0 6px 6px 0",
+                        }}>
+                          <div style={{ fontSize: 9, letterSpacing: 1.5, color: WARN_COLORS[tip.level], marginBottom: 2 }}>{tip.label}</div>
+                          <div style={{ fontSize: 10, color: "#bbb", lineHeight: 1.5 }}>{tip.text}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+
               {/* note + commit */}
               <div style={{ padding: "10px 12px" }}>
                 <input placeholder="Meal note (optional)" value={planNote}
@@ -559,7 +587,8 @@ export default function SearchPanel({ mealTime, setMealTime, onAdd, diabetesMode
                   scState={planServingChoice}    setScState={setPlanServingChoice}
                   qState={planQuantity}          setQState={setPlanQuantity}
                   cgState={planCustomGrams}      setCgState={setPlanCustomGrams}
-                  detailCache={detailCache}  mode={mode}  diabetesMode={diabetesMode} />
+                  detailCache={detailCache}  mode={mode}  diabetesMode={diabetesMode}
+                  mealTime={mealTime}        todayNetCarbs={todayNetCarbs} />
               ))}
             </div>
           )}
