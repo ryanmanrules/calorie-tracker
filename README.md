@@ -35,29 +35,11 @@ A fast PWA for daily calorie and macro tracking. Built for personal use with an 
 ## Tech Stack
 
 - **React 19** + **Vite**
-- Deployed on **GitHub Pages** as a PWA (installable on iOS and Android)
-- **USDA FoodData Central API** for food search
-- `localStorage` for all data — fully offline after first load, no backend
-
-## Local Development
-
-```bash
-npm install
-```
-
-Create a `.env` file in the project root:
-```
-VITE_USDA_API_KEY=your_key_here
-```
-
-Get a free API key at [fdc.nal.usda.gov](https://fdc.nal.usda.gov/api-guide.html).
-
-```bash
-npm run dev      # starts dev server at localhost:5173
-npm run build    # production build
-npm run deploy   # build + push to gh-pages (deploys live site)
-```
+- Deployed on **GitHub Pages** as a PWA (installable on iOS and Android by adding to homepage)
+- **USDA FoodData Central API** for food search (likely to use this data and refine it to be more personable for this app)
+- `localStorage` for all data — fully offline after first load, no backend (for now, future plans for cloud DC, will update this when it happens)
 
 ## Data & Privacy
 
 All data is stored in your browser's `localStorage`. Nothing is sent to any server — the only external request is to the USDA API when searching for food. Clearing your browser data will erase your log.
+(obviously this will change when moving to cloud)
