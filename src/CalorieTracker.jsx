@@ -291,7 +291,7 @@ export default function CalorieTracker() {
 
       {/* only shown on today — past days are read-only */}
       {true ? (
-        <SearchPanel mealTime={mealTime} setMealTime={setMealTime} onAdd={addItem} diabetesMode={diabetesMode} weeklyMealAvg={weeklyMealAvg} />
+        <SearchPanel mealTime={mealTime} setMealTime={setMealTime} onAdd={addItem} diabetesMode={diabetesMode} weeklyMealAvg={weeklyMealAvg} todayNetCarbs={netCarbs} />
       ) : (
         <div style={{ fontSize: 12, color: "#777", textAlign: "center", padding: "12px 0" }}>
           Viewing past day — <span onClick={() => switchDay(todayKey())} style={{ color: MC.calories, cursor: "pointer" }}>go to today</span> to add entries.

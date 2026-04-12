@@ -15,15 +15,67 @@ const smallInput = {
   fontSize: 11, fontFamily: "inherit", outline: "none",
 };
 
+// T1D-specific per-item warnings based on peer-reviewed clinical thresholds
+function getT1DWarnings(scaledN, mealTime, todayNetCarbs) {
+  const warnings = [];
+  const net = Math.max(0, (scaledN.carbs || 0) - (scaledN.fiber || 0));
+  if (net < 10) return warnings;
+
+  // 1. High net carbs — dosing error risk scales with carb load
+  if (net >= 75) {
+    warnings.push({ level: "high", label: "VERY HIGH CARB LOAD", text: `${Math.round(net)}g net carbs. A 10% dosing error at this load equals ~${Math.round(net * 0.1)}g unaccounted glucose — consider splitting across two meals.` });
+  } else if (net >= 45) {
+    warnings.push({ level: "warn", label: "HIGH CARB LOAD", text: `${Math.round(net)}g net carbs significantly increases bolus complexity. Large single servings amplify dosing errors in T1D.` });
+  }
+
+  // 2. High carb + high fat — "pizza effect", delays glucose peak 2–5 hrs (Diabetes Care 2013/2020)
+  if (net >= 20 && (scaledN.fat || 0) >= 25) {
+    warnings.push({ level: "warn", label: "DELAYED SPIKE RISK", text: `High carb + fat (${Math.round(scaledN.fat)}g fat) shifts glucose absorption to 2–5 hrs post-meal. A standard upfront bolus will likely miss the peak — consider a split or extended bolus.` });
+  }
+
+  // 3. Fast-absorbing carbs — ADA threshold: <5g fiber means no slow-down of absorption
+  if (net >= 20 && (scaledN.fiber || 0) < 3) {
+    warnings.push({ level: "warn", label: "FAST ABSORPTION", text: `Under 3g fiber — these carbs enter the bloodstream quickly and blood sugar can peak within 30–60 min. Pre-bolusing 15–20 min before eating may help flatten the spike.` });
+  }
+
+  // 4. Dawn phenomenon — morning cortisol + growth hormone cause 20–50% higher insulin resistance (StatPearls)
+  if (mealTime === "Morning" && net >= 30) {
+    warnings.push({ level: "info", label: "DAWN PHENOMENON", text: `Morning insulin resistance means ${Math.round(net)}g carbs at breakfast raises blood sugar more than the same amount at lunch. Many T1D patients need a higher insulin-to-carb ratio for breakfast.` });
+  }
+
+  // 5. Evening/snack high fat+carb — peak glucose shifts to 11pm–4am sleep window (Diabetes Care 2013)
+  if ((mealTime === "Evening" || mealTime === "Snack") && (scaledN.fat || 0) >= 20 && net >= 20) {
+    warnings.push({ level: "warn", label: "OVERNIGHT RISK", text: `High carb + fat (${Math.round(scaledN.fat)}g fat) in the evening shifts your glucose peak into sleeping hours when you can't catch it. Check glucose before bed.` });
+  }
+
+  // 6. Daily cumulative — above 130g/day bolus insulin demand rises significantly (Lancet 2023)
+  if (typeof todayNetCarbs === "number" && todayNetCarbs >= 30 && (todayNetCarbs + net) > 130) {
+    warnings.push({ level: "info", label: "DAILY CARB TOTAL", text: `This would bring today to ~${Math.round(todayNetCarbs + net)}g net carbs. Above 130g/day total bolus insulin demand rises, making glucose stability and weight management harder in T1D.` });
+  }
+
+  return warnings;
+}
+
+const WARN_COLORS = { high: "#ef4444", warn: "#f97316", info: "#f59e0b" };
+
 // Defined outside SearchPanel so its identity is stable across re-renders —
 // prevents the qty input from unmounting/remounting (and losing focus) on every keystroke.
-function ResultRow({ food, onAddFn, scState, setScState, qState, setQState, cgState, setCgState, detailCache, mode, diabetesMode }) {
+function ResultRow({ food, onAddFn, scState, setScState, qState, setQState, cgState, setCgState, detailCache, mode, diabetesMode, mealTime, todayNetCarbs }) {
   const detail    = detailCache[food.fdcId] || food;
   const servings  = extractServings(food, detail);
   const choiceIdx = scState[food.fdcId] ?? 0;
   const chosen    = servings[choiceIdx];
   const isCustom  = chosen.grams === null;
   const n         = extractNutrients(detail.foodNutrients || food.foodNutrients || []);
+
+  // scale nutrients to the actual serving being added — warnings react to qty/grams changes
+  const rawGrams = isCustom
+    ? parseFloat(cgState[food.fdcId] || "100")
+    : (chosen.grams || 100) * parseFloat(qState[food.fdcId] || "1");
+  const scale    = rawGrams / 100;
+  const scaledN  = { carbs: n.carbs * scale, fat: n.fat * scale, fiber: n.fiber * scale };
+  const t1dWarnings = diabetesMode ? getT1DWarnings(scaledN, mealTime, todayNetCarbs) : [];
+
   return (
     <div className="result-row" style={{ padding: "12px", borderBottom: "1px solid #28283a" }}>
       <div style={{ fontSize: 12, color: "#fff", marginBottom: 2 }}>{food.description}</div>
@@ -45,6 +97,21 @@ function ResultRow({ food, onAddFn, scState, setScState, qState, setQState, cgSt
         style={{ ...smallInput, marginBottom: 8, cursor: "pointer" }}>
         {servings.map((s, i) => <option key={i} value={i}>{s.label}</option>)}
       </select>
+      {t1dWarnings.length > 0 && (
+        <div style={{ marginBottom: 8, display: "flex", flexDirection: "column", gap: 4 }}>
+          {t1dWarnings.map((w, i) => (
+            <div key={i} style={{
+              padding: "6px 10px",
+              background: "#1a1020",
+              borderLeft: `3px solid ${WARN_COLORS[w.level]}`,
+              borderRadius: "0 6px 6px 0",
+            }}>
+              <div style={{ fontSize: 9, letterSpacing: 1.5, color: WARN_COLORS[w.level], marginBottom: 2 }}>{w.label}</div>
+              <div style={{ fontSize: 10, color: "#bbb", lineHeight: 1.5 }}>{w.text}</div>
+            </div>
+          ))}
+        </div>
+      )}
       <div style={{ display: "flex", gap: 6 }}>
         {isCustom ? (
           <input key="amount" type="text" inputMode="decimal" placeholder="Enter grams" value={cgState[food.fdcId] || ""}
@@ -66,7 +133,7 @@ function ResultRow({ food, onAddFn, scState, setScState, qState, setQState, cgSt
 
 let planId = 1;
 
-export default function SearchPanel({ mealTime, setMealTime, onAdd, diabetesMode, weeklyMealAvg }) {
+export default function SearchPanel({ mealTime, setMealTime, onAdd, diabetesMode, weeklyMealAvg, todayNetCarbs }) {
   const [mode, setMode]             = useState(MODES.SEARCH);
   const [query, setQuery]           = useState("");
   const [results, setResults]       = useState([]);
@@ -364,7 +431,8 @@ export default function SearchPanel({ mealTime, setMealTime, onAdd, diabetesMode
                   scState={servingChoice}    setScState={setServingChoice}
                   qState={quantity}          setQState={setQuantity}
                   cgState={customGrams}      setCgState={setCustomGrams}
-                  detailCache={detailCache}  mode={mode}  diabetesMode={diabetesMode} />
+                  detailCache={detailCache}  mode={mode}  diabetesMode={diabetesMode}
+                  mealTime={mealTime}        todayNetCarbs={todayNetCarbs} />
               ))}
             </div>
           )}
