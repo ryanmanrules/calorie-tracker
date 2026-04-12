@@ -15,45 +15,46 @@ const smallInput = {
   fontSize: 11, fontFamily: "inherit", outline: "none",
 };
 
-// T1D-specific per-item warnings based on peer-reviewed clinical thresholds
+// T1D-specific per-item guidance based on peer-reviewed clinical thresholds.
+// Tone: helpful coaching, not restriction — always suggests a strategy.
 function getT1DWarnings(scaledN, mealTime, todayNetCarbs) {
-  const warnings = [];
+  const tips = [];
   const net = Math.max(0, (scaledN.carbs || 0) - (scaledN.fiber || 0));
-  if (net < 10) return warnings;
+  if (net < 10) return tips;
 
   // 1. High net carbs — dosing error risk scales with carb load
   if (net >= 75) {
-    warnings.push({ level: "high", label: "VERY HIGH CARB LOAD", text: `${Math.round(net)}g net carbs. A 10% dosing error at this load equals ~${Math.round(net * 0.1)}g unaccounted glucose — consider splitting across two meals.` });
+    tips.push({ level: "high", label: "DOSING TIP", text: `${Math.round(net)}g net carbs is a large bolus load — small miscalculations have a bigger impact at this size. Pre-bolusing 10–15 min early and checking at the 1-hr mark can help keep the peak in range.` });
   } else if (net >= 45) {
-    warnings.push({ level: "warn", label: "HIGH CARB LOAD", text: `${Math.round(net)}g net carbs significantly increases bolus complexity. Large single servings amplify dosing errors in T1D.` });
+    tips.push({ level: "warn", label: "DOSING TIP", text: `${Math.round(net)}g net carbs — worth double-checking your I:C ratio for this meal. Pre-bolusing 10–15 min before eating gives insulin a head start on the glucose curve.` });
   }
 
   // 2. High carb + high fat — "pizza effect", delays glucose peak 2–5 hrs (Diabetes Care 2013/2020)
   if (net >= 20 && (scaledN.fat || 0) >= 25) {
-    warnings.push({ level: "warn", label: "DELAYED SPIKE RISK", text: `High carb + fat (${Math.round(scaledN.fat)}g fat) shifts glucose absorption to 2–5 hrs post-meal. A standard upfront bolus will likely miss the peak — consider a split or extended bolus.` });
+    tips.push({ level: "warn", label: "SPLIT BOLUS TIP", text: `High carb + fat combo (${Math.round(scaledN.fat)}g fat) slows digestion so glucose peaks 2–5 hrs after eating instead of right away. Taking part of your bolus now and the rest 1–2 hrs later can match this curve much better.` });
   }
 
-  // 3. Fast-absorbing carbs — ADA threshold: <5g fiber means no slow-down of absorption
-  if (net >= 20 && (scaledN.fiber || 0) < 3) {
-    warnings.push({ level: "warn", label: "FAST ABSORPTION", text: `Under 3g fiber — these carbs enter the bloodstream quickly and blood sugar can peak within 30–60 min. Pre-bolusing 15–20 min before eating may help flatten the spike.` });
+  // 3. Fast-absorbing carbs — ADA: <5g fiber = no meaningful absorption slow-down
+  if (net >= 15 && (scaledN.fiber || 0) < 3) {
+    tips.push({ level: "warn", label: "PRE-BOLUS TIP", text: `Low fiber means these carbs hit the bloodstream quickly — blood sugar can peak within 30–60 min. Dosing 15–20 min before eating (instead of at the meal) gives insulin time to keep up.` });
   }
 
   // 4. Dawn phenomenon — morning cortisol + growth hormone cause 20–50% higher insulin resistance (StatPearls)
   if (mealTime === "Morning" && net >= 30) {
-    warnings.push({ level: "info", label: "DAWN PHENOMENON", text: `Morning insulin resistance means ${Math.round(net)}g carbs at breakfast raises blood sugar more than the same amount at lunch. Many T1D patients need a higher insulin-to-carb ratio for breakfast.` });
+    tips.push({ level: "info", label: "BREAKFAST TIP", text: `Morning hormones make the same carbs raise blood sugar more than they would at lunch. If your post-breakfast numbers run high, a slightly higher I:C ratio at breakfast is worth testing with your care team.` });
   }
 
   // 5. Evening/snack high fat+carb — peak glucose shifts to 11pm–4am sleep window (Diabetes Care 2013)
   if ((mealTime === "Evening" || mealTime === "Snack") && (scaledN.fat || 0) >= 20 && net >= 20) {
-    warnings.push({ level: "warn", label: "OVERNIGHT RISK", text: `High carb + fat (${Math.round(scaledN.fat)}g fat) in the evening shifts your glucose peak into sleeping hours when you can't catch it. Check glucose before bed.` });
+    tips.push({ level: "warn", label: "BEDTIME CHECK", text: `High carb + fat (${Math.round(scaledN.fat)}g fat) in the evening tends to peak during sleep. A glucose check before bed — and a small correction if needed — can help you stay in range overnight.` });
   }
 
   // 6. Daily cumulative — above 130g/day bolus insulin demand rises significantly (Lancet 2023)
   if (typeof todayNetCarbs === "number" && todayNetCarbs >= 30 && (todayNetCarbs + net) > 130) {
-    warnings.push({ level: "info", label: "DAILY CARB TOTAL", text: `This would bring today to ~${Math.round(todayNetCarbs + net)}g net carbs. Above 130g/day total bolus insulin demand rises, making glucose stability and weight management harder in T1D.` });
+    tips.push({ level: "info", label: "DAILY CONTEXT", text: `This would put you at ~${Math.round(todayNetCarbs + net)}g net carbs today. If remaining meals lean protein and fat-heavy instead of carb-heavy, you can keep total insulin demand lower for the rest of the day.` });
   }
 
-  return warnings;
+  return tips;
 }
 
 const WARN_COLORS = { high: "#ef4444", warn: "#f97316", info: "#f59e0b" };
