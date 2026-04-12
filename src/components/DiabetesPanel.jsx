@@ -192,7 +192,7 @@ function analyzeWeightChange(weightLog, glucoseLog, insulinLog, dateKey) {
     return { warnings, insights };
 }
 
-export default function DiabetesPanel({ netCarbs, dateKey }) {
+export default function DiabetesPanel({ netCarbs, allItems, dateKey }) {
     const [glucoseLog, setGlucoseLog] = useState(loadGlucose);
     const [insulinLog, setInsulinLog] = useState(loadInsulin);
     const [weightLog, setWeightLog] = useState(loadWeight);
