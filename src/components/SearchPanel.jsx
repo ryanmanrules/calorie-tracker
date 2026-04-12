@@ -147,6 +147,7 @@ export default function SearchPanel({ mealTime, setMealTime, onAdd, diabetesMode
   const [detailCache, setDetailCache]     = useState({});
   const [recents, setRecents]             = useState(() => lsGet("ct_recents", []));
   const [favorites, setFavorites]         = useState(() => lsGet("ct_favorites", []));
+  const [favoritesOpen, setFavoritesOpen] = useState(false);
 
   // planned meal items — built up before committing to the log
   const [plannedItems, setPlannedItems] = useState([]);
@@ -359,8 +360,7 @@ export default function SearchPanel({ mealTime, setMealTime, onAdd, diabetesMode
 
   const favIds        = new Set(favorites.map((f) => f.fdcId));
   const recentNonFavs = recents.filter((r) => !favIds.has(r.fdcId));
-  const storedList    = [...favorites, ...recentNonFavs];
-  const showStored    = mode === MODES.SEARCH && storedList.length > 0 && !query.trim();
+  const showStored    = mode === MODES.SEARCH && recentNonFavs.length > 0 && !query.trim();
 
   // data type filter toggle style
   const dtBtn = (val) => ({
@@ -381,16 +381,62 @@ export default function SearchPanel({ mealTime, setMealTime, onAdd, diabetesMode
   return (
     <div style={{ background: "#242430", border: "1px solid #2e2e3a", borderRadius: 16, padding: "20px", marginBottom: 20 }}>
 
+      {/* favorites modal overlay */}
+      {favoritesOpen && (
+        <div style={{ position: "fixed", inset: 0, background: "#18181f", zIndex: 200, display: "flex", flexDirection: "column", maxWidth: 580, margin: "0 auto" }}>
+          <div style={{ padding: "16px 20px", borderBottom: "1px solid #2e2e3a", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
+            <div style={{ fontSize: 10, letterSpacing: 3, color: "#f59e0b" }}>★ FAVORITES</div>
+            <button onClick={() => setFavoritesOpen(false)} style={{ background: "none", border: "1px solid #2e2e3a", borderRadius: 6, padding: "3px 10px", color: "#777", fontSize: 11, cursor: "pointer" }}>✕ CLOSE</button>
+          </div>
+          <div style={{ overflowY: "auto", flex: 1 }}>
+            {favorites.length === 0 ? (
+              <div style={{ fontSize: 11, color: "#444", textAlign: "center", padding: "40px 20px" }}>No favorites yet — star items in search to save them here.</div>
+            ) : favorites.map((stored) => (
+              <div key={stored.fdcId} className="stored-row" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 20px", borderBottom: "1px solid #28283a", transition: "background 0.15s" }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 12, color: "#fff" }}>{stored.description}</div>
+                  <div style={{ fontSize: 10, marginTop: 2 }}>
+                    <span style={{ color: MC.calories }}>{Math.round(stored.nutrients.calories)} kcal</span>
+                    <span style={{ color: "#888" }}> &nbsp;·&nbsp; </span>
+                    <span style={{ color: MC.protein }}>P:{Math.round(stored.nutrients.protein)}g</span>
+                    <span style={{ color: "#888" }}> &nbsp;·&nbsp; </span>
+                    <span style={{ color: MC.carbs }}>C:{Math.round(stored.nutrients.carbs)}g</span>
+                    <span style={{ color: "#888" }}> &nbsp;·&nbsp; </span>
+                    <span style={{ color: MC.fat }}>F:{Math.round(stored.nutrients.fat)}g</span>
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                  <button className="star-btn active" onClick={() => toggleFavorite(stored.fdcId)}>★</button>
+                  <button onClick={() => { addFromStored(stored); setFavoritesOpen(false); }}
+                    style={{ background: "#f97316", border: "none", borderRadius: 8, padding: "5px 14px", color: "#fff", fontSize: 11, cursor: "pointer" }}>
+                    Add
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* header + mode toggles */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
         <div style={{ fontSize: 10, letterSpacing: 3, color: "#fff" }}>
           {mode === MODES.SEARCH ? "SEARCH FOOD — USDA DATABASE" : mode === MODES.MANUAL ? "MANUAL ENTRY" : "MEAL PLANNER"}
         </div>
-        <div style={{ display: "flex", gap: 4 }}>
-          <button style={modeBtn(MODES.SEARCH)} onClick={() => { setMode(MODES.SEARCH); setQuery(""); setResults([]); }}>SEARCH</button>
-          <button style={modeBtn(MODES.MANUAL)} onClick={() => { setMode(MODES.MANUAL); setQuery(""); setResults([]); }}>MANUAL</button>
-          <button style={modeBtn(MODES.PLAN)}   onClick={() => { setMode(MODES.PLAN);   setQuery(""); setResults([]); }}>PLAN</button>
-        </div>
+        <button onClick={() => setFavoritesOpen(true)} style={{
+          background: favorites.length > 0 ? "#f59e0b18" : "none",
+          border: `1px solid ${favorites.length > 0 ? "#f59e0b44" : "#2e2e3a"}`,
+          borderRadius: 6, padding: "3px 9px",
+          color: favorites.length > 0 ? "#f59e0b" : "#555",
+          fontSize: 9, cursor: "pointer", letterSpacing: 1, display: "flex", alignItems: "center", gap: 4,
+        }}>
+          ★ {favorites.length > 0 ? `${favorites.length} ` : ""}FAVORITES
+        </button>
+      </div>
+      <div style={{ display: "flex", gap: 4, marginBottom: 14 }}>
+        <button style={modeBtn(MODES.SEARCH)} onClick={() => { setMode(MODES.SEARCH); setQuery(""); setResults([]); }}>SEARCH</button>
+        <button style={modeBtn(MODES.MANUAL)} onClick={() => { setMode(MODES.MANUAL); setQuery(""); setResults([]); }}>MANUAL</button>
+        <button style={modeBtn(MODES.PLAN)}   onClick={() => { setMode(MODES.PLAN);   setQuery(""); setResults([]); }}>PLAN</button>
       </div>
 
       {/* meal time selector — shown in all modes */}
@@ -412,41 +458,32 @@ export default function SearchPanel({ mealTime, setMealTime, onAdd, diabetesMode
 
           {showStored && (
             <div style={{ background: "#18181f", border: "1px solid #2a2a38", borderRadius: 10, overflow: "hidden", marginTop: 8 }}>
-              {favorites.length > 0 && <div style={{ fontSize: 9, letterSpacing: 2, color: "#f59e0b", padding: "8px 12px 4px" }}>FAVORITES</div>}
-              {storedList.map((stored, idx) => {
-                const isFav     = favIds.has(stored.fdcId);
-                const showLabel = !isFav && idx === favorites.length;
-                return (
-                  <div key={stored.fdcId}>
-                    {showLabel && (
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px 4px", borderTop: favorites.length ? "1px solid #28283a" : "none" }}>
-                        <span style={{ fontSize: 9, letterSpacing: 2, color: "#777" }}>RECENTS</span>
-                        <button onClick={clearRecents} style={{ background: "none", border: "none", fontSize: 9, color: "#555", cursor: "pointer", letterSpacing: 1 }}>CLEAR</button>
-                      </div>
-                    )}
-                    <div className="stored-row" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 12px", borderBottom: "1px solid #28283a", transition: "background 0.15s" }}>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 12, color: "#fff" }}>{stored.description}</div>
-                        <div style={{ fontSize: 10, marginTop: 2 }}>
-                          <span style={{ color: MC.calories }}>{Math.round(stored.nutrients.calories)} kcal</span>
-                          <span style={{ color: "#888" }}> &nbsp;·&nbsp; </span>
-                          <span style={{ color: MC.protein }}>P:{Math.round(stored.nutrients.protein)}g</span>
-                          <span style={{ color: "#888" }}> &nbsp;·&nbsp; </span>
-                          <span style={{ color: MC.carbs }}>C:{Math.round(stored.nutrients.carbs)}g</span>
-                          <span style={{ color: "#888" }}> &nbsp;·&nbsp; </span>
-                          <span style={{ color: MC.fat }}>F:{Math.round(stored.nutrients.fat)}g</span>
-                          <span style={{ color: "#888" }}> &nbsp;·&nbsp; </span>
-                          <span style={{ color: MC.fiber }}>Fi:{Math.round(stored.nutrients.fiber || 0)}g</span>
-                        </div>
-                      </div>
-                      <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-                        <button className={`star-btn${isFav ? " active" : ""}`} onClick={() => toggleFavorite(stored.fdcId)}>★</button>
-                        <button onClick={() => addFromStored(stored)} style={{ background: "#f97316", border: "none", borderRadius: 8, padding: "4px 12px", color: "#fff", fontSize: 11, cursor: "pointer" }}>Add</button>
-                      </div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px 4px" }}>
+                <span style={{ fontSize: 9, letterSpacing: 2, color: "#777" }}>RECENTS</span>
+                <button onClick={clearRecents} style={{ background: "none", border: "none", fontSize: 9, color: "#555", cursor: "pointer", letterSpacing: 1 }}>CLEAR</button>
+              </div>
+              {recentNonFavs.map((stored) => (
+                <div key={stored.fdcId} className="stored-row" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 12px", borderBottom: "1px solid #28283a", transition: "background 0.15s" }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 12, color: "#fff" }}>{stored.description}</div>
+                    <div style={{ fontSize: 10, marginTop: 2 }}>
+                      <span style={{ color: MC.calories }}>{Math.round(stored.nutrients.calories)} kcal</span>
+                      <span style={{ color: "#888" }}> &nbsp;·&nbsp; </span>
+                      <span style={{ color: MC.protein }}>P:{Math.round(stored.nutrients.protein)}g</span>
+                      <span style={{ color: "#888" }}> &nbsp;·&nbsp; </span>
+                      <span style={{ color: MC.carbs }}>C:{Math.round(stored.nutrients.carbs)}g</span>
+                      <span style={{ color: "#888" }}> &nbsp;·&nbsp; </span>
+                      <span style={{ color: MC.fat }}>F:{Math.round(stored.nutrients.fat)}g</span>
+                      <span style={{ color: "#888" }}> &nbsp;·&nbsp; </span>
+                      <span style={{ color: MC.fiber }}>Fi:{Math.round(stored.nutrients.fiber || 0)}g</span>
                     </div>
                   </div>
-                );
-              })}
+                  <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                    <button className="star-btn" onClick={() => toggleFavorite(stored.fdcId)}>★</button>
+                    <button onClick={() => addFromStored(stored)} style={{ background: "#f97316", border: "none", borderRadius: 8, padding: "4px 12px", color: "#fff", fontSize: 11, cursor: "pointer" }}>Add</button>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
 
