@@ -161,7 +161,7 @@ export default function SearchPanel({ mealTime, setMealTime, onAdd, diabetesMode
   const [planQuantity, setPlanQuantity]           = useState({});
   const [planCustomGrams, setPlanCustomGrams]     = useState({});
 
-  const [dataType, setDataType] = useState("Foundation,SR Legacy");
+  const [dataType, setDataType] = useState("Branded");
 
   const searchTimeout = useRef(null);
   const planTimeout   = useRef(null);
