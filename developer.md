@@ -101,6 +101,5 @@ Tone is coaching/suggestive — always offers a concrete strategy, never just wa
 
 ## Git / Deploy Workflow
 - Source lives on `master`, deployed build on `gh-pages`
-- Dev server runs from git worktree at `.claude/worktrees/silly-pasteur`
 - After editing in worktree, changes must be committed to `master` before deploying
 - `npm run deploy` = `npm run build` + `gh-pages -d dist` (all-in-one)
