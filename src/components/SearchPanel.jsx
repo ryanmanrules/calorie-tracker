@@ -175,9 +175,9 @@ export default function SearchPanel({ mealTime, setMealTime, onAdd, diabetesMode
   const buildSearchUrl = (q, size) => {
     const base = `${USDA_URL}/foods/search?query=${encodeURIComponent(q)}&pageSize=${size}&api_key=${USDA_KEY}`;
     if (!dataType) return base;
-    // each dataType value needs its own &dataType= param — comma-encoding breaks the USDA filter
-    const dtParams = dataType.split(",").map((d) => `dataType=${encodeURIComponent(d.trim())}`).join("&");
-    return `${base}&${dtParams}`;
+    // USDA expects comma as literal separator, only encode spaces — not the whole string
+    const dtParam = dataType.split(",").map((d) => encodeURIComponent(d.trim())).join(",");
+    return `${base}&dataType=${dtParam}`;
   };
 
   // ── debounced USDA search (regular mode) ─────────────────────────────────
