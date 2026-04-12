@@ -273,9 +273,10 @@ export default function WeightPanel({ dateKey, calorieGoal }) {
                         : "Log today's weight to track trends"
                 }
             >
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: todayEntry && sparkData.length >= 2 ? 10 : 0 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
                     <input
-                        type="number"
+                        type="text"
+                        inputMode="decimal"
                         placeholder="lbs"
                         value={wValue}
                         onChange={(e) => setWValue(e.target.value)}
@@ -292,15 +293,15 @@ export default function WeightPanel({ dateKey, calorieGoal }) {
                             ✕
                         </button>
                     )}
-                    {todayEntry && sparkData.length >= 2 && (
-                        <div style={{ marginLeft: "auto", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2 }}>
-                            <Sparkline data={sparkData} color={trendColor} />
-                            <span style={{ fontSize: 9, color: trendColor, letterSpacing: 1 }}>
-                                {weightTrend === "down" ? "TRENDING DOWN" : weightTrend === "up" ? "TRENDING UP" : "STABLE"}
-                            </span>
-                        </div>
-                    )}
                 </div>
+                {todayEntry && sparkData.length >= 2 && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <Sparkline data={sparkData} color={trendColor} />
+                        <span style={{ fontSize: 9, color: trendColor, letterSpacing: 1 }}>
+                            {weightTrend === "down" ? "TRENDING DOWN" : weightTrend === "up" ? "TRENDING UP" : "STABLE"}
+                        </span>
+                    </div>
+                )}
             </Section>
 
             {/* insights */}
