@@ -172,13 +172,19 @@ export default function SearchPanel({ mealTime, setMealTime, onAdd, diabetesMode
     fontSize: 13, fontFamily: "inherit", outline: "none",
   };
 
-  const buildSearchUrl = (q, size) => {
-    const base = `${USDA_URL}/foods/search?query=${encodeURIComponent(q)}&pageSize=${size}&api_key=${USDA_KEY}`;
-    if (!dataType) return base;
-    // USDA expects comma as literal separator, only encode spaces — not the whole string
-    const dtParam = dataType.split(",").map((d) => encodeURIComponent(d.trim())).join(",");
-    return `${base}&dataType=${dtParam}`;
+  // POST body search — unambiguous array format, no query-param encoding issues
+  const buildSearchBody = (q, size) => {
+    const body = { query: q, pageSize: size };
+    if (dataType) body.dataType = dataType.split(",").map((d) => d.trim());
+    return body;
   };
+
+  const doSearch = (q, size) =>
+    fetch(`${USDA_URL}/foods/search?api_key=${USDA_KEY}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(buildSearchBody(q, size)),
+    });
 
   // ── debounced USDA search (regular mode) ─────────────────────────────────
   useEffect(() => {
@@ -187,7 +193,7 @@ export default function SearchPanel({ mealTime, setMealTime, onAdd, diabetesMode
     searchTimeout.current = setTimeout(async () => {
       setSearching(true); setSearchErr("");
       try {
-        const res  = await fetch(buildSearchUrl(query, 6));
+        const res  = await doSearch(query, 6);
         const data = await res.json();
         setResults(data.foods || []);
       } catch { setSearchErr("Search failed. Check your connection."); }
@@ -202,7 +208,7 @@ export default function SearchPanel({ mealTime, setMealTime, onAdd, diabetesMode
     planTimeout.current = setTimeout(async () => {
       setPlanSearching(true);
       try {
-        const res  = await fetch(buildSearchUrl(planQuery, 5));
+        const res  = await doSearch(planQuery, 5);
         const data = await res.json();
         setPlanResults(data.foods || []);
       } catch {}
