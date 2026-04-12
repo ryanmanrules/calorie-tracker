@@ -1,5 +1,7 @@
 import { useState } from "react";
-import { lsGet, lsSet } from "../utils/storage";
+import { lsGet, lsSet, loadDay } from "../utils/storage";
+import Sparkline from "./Sparkline";
+import Section from "./Section";
 
 const C = {
     good: "#22c55e",
@@ -22,11 +24,6 @@ const saveInsulin = (log) => lsSet("ct_insulin", log);
 const loadWeight = () => lsGet("ct_weight", []);
 const saveWeight = (log) => lsSet("ct_weight", log);
 
-// helper to read a day's food from localStorage
-const getDayFood = (dk) => {
-    try { const v = localStorage.getItem(`ct_day_${dk}`); return v ? JSON.parse(v) : []; }
-    catch { return []; }
-};
 
 let gId = 1;
 let iId = 1;
@@ -46,58 +43,6 @@ const glucoseColor = (type, value) => {
     return C.good;
 };
 
-// expandable section — subtitle always visible, tap INFO for detail
-function Section({ title, subtitle, detail, children, accentColor }) {
-    const [open, setOpen] = useState(false);
-    return (
-        <div style={{ background: C.card, border: `1px solid ${accentColor || C.border}22`, borderRadius: 12, marginBottom: 12, overflow: "hidden" }}>
-            <div style={{ padding: "12px 14px" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                    <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 10, letterSpacing: 2, color: accentColor || "#fff" }}>{title}</div>
-                        {subtitle && <div style={{ fontSize: 10, color: C.muted, marginTop: 3, lineHeight: 1.5 }}>{subtitle}</div>}
-                    </div>
-                    {detail && (
-                        <button onClick={() => setOpen((v) => !v)}
-                            style={{ background: "none", border: `1px solid ${C.border}`, borderRadius: 6, padding: "2px 8px", color: C.muted, fontSize: 9, cursor: "pointer", letterSpacing: 1, marginLeft: 10, flexShrink: 0 }}>
-                            {open ? "LESS" : "INFO"}
-                        </button>
-                    )}
-                </div>
-                {open && detail && (
-                    <div style={{ marginTop: 10, padding: "10px 12px", background: C.deep, borderRadius: 8, fontSize: 11, color: "#aaa", lineHeight: 1.7 }}>
-                        {detail}
-                    </div>
-                )}
-            </div>
-            <div style={{ padding: "0 14px 14px" }}>{children}</div>
-        </div>
-    );
-}
-
-// mini sparkline for weight trend
-function Sparkline({ data, color }) {
-    if (data.length < 2) return null;
-    const min = Math.min(...data);
-    const max = Math.max(...data);
-    const range = max - min || 1;
-    const w = 120, h = 32, pad = 4;
-    const points = data.map((v, i) => {
-        const x = pad + (i / (data.length - 1)) * (w - pad * 2);
-        const y = pad + ((max - v) / range) * (h - pad * 2);
-        return `${x},${y}`;
-    }).join(" ");
-    return (
-        <svg width={w} height={h} style={{ display: "block" }}>
-            <polyline points={points} fill="none" stroke={color} strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" />
-            {data.map((v, i) => {
-                const x = pad + (i / (data.length - 1)) * (w - pad * 2);
-                const y = pad + ((max - v) / range) * (h - pad * 2);
-                return i === data.length - 1 ? <circle key={i} cx={x} cy={y} r="2.5" fill={color} /> : null;
-            })}
-        </svg>
-    );
-}
 
 // analyze yesterday's data to surface patterns relevant to weight change
 function analyzeWeightChange(weightLog, glucoseLog, insulinLog, dateKey) {
@@ -129,14 +74,14 @@ function analyzeWeightChange(weightLog, glucoseLog, insulinLog, dateKey) {
     const gained = avgWeight !== null && todayWeight > avgWeight + 0.3;
     const lost = avgWeight !== null && todayWeight < avgWeight - 0.3;
 
-    const yFood = getDayFood(yKey);
+    const yFood = loadDay(yKey);
     const yNetCarbs = yFood.reduce((a, i) => a + Math.max(0, (i.carbs || 0) - (i.fiber || 0)), 0);
 
     const recentNetCarbs = [];
     for (let d = 2; d <= 8; d++) {
         const dt = new Date(viewDate); dt.setDate(dt.getDate() - d);
         const dk = dt.toISOString().slice(0, 10);
-        const df = getDayFood(dk);
+        const df = loadDay(dk);
         if (df.length) recentNetCarbs.push(df.reduce((a, i) => a + Math.max(0, (i.carbs || 0) - (i.fiber || 0)), 0));
     }
     const avgNetCarbs = recentNetCarbs.length ? recentNetCarbs.reduce((a, b) => a + b, 0) / recentNetCarbs.length : null;
@@ -217,7 +162,7 @@ export default function DiabetesPanel({ netCarbs, allItems, dateKey }) {
             const dt = new Date(today + "T12:00:00"); dt.setDate(dt.getDate() - d);
             const dk = dt.toISOString().slice(0, 10);
             const label = d === 0 ? "Today" : d === 1 ? "Yesterday" : dt.toLocaleDateString("en-US", { weekday: "short" });
-            const items = getDayFood(dk);
+            const items = loadDay(dk);
             const net = items.reduce((a, i) => a + Math.max(0, (i.carbs || 0) - (i.fiber || 0)), 0);
             const cal = items.reduce((a, i) => a + (i.calories || 0), 0);
             const byMeal = {};
@@ -300,7 +245,7 @@ export default function DiabetesPanel({ netCarbs, allItems, dateKey }) {
             const days = [];
             for (let d = 0; d < 7; d++) {
                 const dt = new Date(today + "T12:00:00"); dt.setDate(dt.getDate() - d);
-                const items = getDayFood(dt.toISOString().slice(0, 10)).filter((i) => i.time === "Morning");
+                const items = loadDay(dt.toISOString().slice(0, 10)).filter((i) => i.time === "Morning");
                 if (items.length) days.push(items.reduce((a, i) => a + Math.max(0, (i.carbs || 0) - (i.fiber || 0)), 0));
             }
             return days.length ? Math.round(days.reduce((a, b) => a + b, 0) / days.length) : null;
@@ -315,7 +260,7 @@ export default function DiabetesPanel({ netCarbs, allItems, dateKey }) {
             let f = 0;
             for (let d = 0; d < 7; d++) {
                 const dt = new Date(today + "T12:00:00"); dt.setDate(dt.getDate() - d);
-                f += getDayFood(dt.toISOString().slice(0, 10)).reduce((a, i) => a + (i.fiber || 0), 0);
+                f += loadDay(dt.toISOString().slice(0, 10)).reduce((a, i) => a + (i.fiber || 0), 0);
             }
             return f;
         })();
@@ -341,7 +286,7 @@ export default function DiabetesPanel({ netCarbs, allItems, dateKey }) {
                 const dt = new Date(today + "T12:00:00"); dt.setDate(dt.getDate() - d);
                 const dk = dt.toISOString().slice(0, 10);
                 for (const g of ["Morning", "Afternoon", "Evening", "Snack"]) {
-                    const p = getDayFood(dk).filter((i) => i.time === g).reduce((a, i) => a + (i.protein || 0), 0);
+                    const p = loadDay(dk).filter((i) => i.time === g).reduce((a, i) => a + (i.protein || 0), 0);
                     if (p >= 40) return { day: d === 0 ? "today" : d === 1 ? "yesterday" : "2 days ago", meal: g, protein: Math.round(p) };
                 }
             }
@@ -357,7 +302,7 @@ export default function DiabetesPanel({ netCarbs, allItems, dateKey }) {
         let slotDays = 0;
         for (let d = 0; d < 7; d++) {
             const dt = new Date(today + "T12:00:00"); dt.setDate(dt.getDate() - d);
-            const items = getDayFood(dt.toISOString().slice(0, 10));
+            const items = loadDay(dt.toISOString().slice(0, 10));
             if (!items.length) continue;
             slotDays++;
             for (const m of MEALS) slotTotals[m] += items.filter((i) => i.time === m).reduce((a, i) => a + Math.max(0, (i.carbs || 0) - (i.fiber || 0)), 0);

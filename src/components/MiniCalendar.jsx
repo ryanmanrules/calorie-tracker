@@ -1,6 +1,3 @@
-// TESTING VERSION — future dates unlocked for testing diabetes weight analysis
-// Swap back to MiniCalendar.jsx (production) before deploying
-
 import { useState } from "react";
 import { todayKey, loadDay } from "../utils/storage";
 import { MC } from "../utils/constants";
@@ -22,13 +19,11 @@ export default function MiniCalendar({ current, onChange, onClose }) {
     else setViewMonth((v) => v - 1);
   };
 
-  // no future month restriction
   const nextMonth = () => {
     if (viewMonth === 11) { setViewYear((v) => v + 1); setViewMonth(0); }
     else setViewMonth((v) => v + 1);
   };
 
-  // no future date restriction
   const selectDay = (day) => {
     if (!day) return;
     const key = `${viewYear}-${String(viewMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
