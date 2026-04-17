@@ -198,7 +198,7 @@ export default function CalorieTracker() {
       {/* date display + streak */}
       <div style={{ marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
         <div>
-          <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 28, fontWeight: 800, letterSpacing: -1, color: "#fff" }}>TODAY'S INTAKE</div>
+          <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 28, fontWeight: 800, letterSpacing: -1, color: "#fff" }}>Countin Calories</div>
           <div style={{ position: "relative", display: "inline-block" }} ref={calRef}>
             <button className="date-btn" onClick={() => setShowCal((v) => !v)} style={{ background: "none", border: "none", padding: "4px 0", cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
               <span style={{ fontSize: 11, color: "#fff", letterSpacing: 2 }}>{formatDisplay(dateKey)}</span>
